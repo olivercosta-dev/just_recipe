@@ -1,7 +1,15 @@
-use axum::{routing::get, Router};
+use axum::{routing::get, routing::post, Router};
+use sqlx::PgPool;
+use crate::routes::*;
 
-use crate::routes::health_check;
+#[derive(Clone)]
+pub struct AppState {
+    pub pool: PgPool
+}
 
-pub fn new_app() -> Router {
-    Router::new().route("/", get(health_check))
+pub async fn new_app(app_state: AppState) -> Router {
+    Router::new()
+        .route("/", get(health_check))
+        .route("/units", post(units))
+        .with_state(app_state)
 }

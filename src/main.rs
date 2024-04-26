@@ -1,8 +1,17 @@
 use just_recipe::app::*;
+use sqlx::{postgres::PgConnectOptions, PgPool};
+
+
 
 #[tokio::main]
 async fn main() {
-    let app = new_app();
+    
+    let pool = PgPool::connect("postgres://postgres@localhost/just_recipe")
+        .await
+        .expect("should have connected to the database");
+
+    let app_state = AppState {pool};
+    let app = new_app(app_state).await;
 
     let listener = tokio::net::TcpListener::bind("0.0.0.0:8080").await.unwrap();
 

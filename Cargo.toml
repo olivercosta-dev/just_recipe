@@ -9,6 +9,13 @@ edition = "2021"
 axum = "0.7.5"
 serde = "1.0.198"
 serde_json = "1.0.116"
-sqlx = "0.7.4"
+sqlx = { version = "0.7.4", features = ["postgres", "macros", "runtime-tokio", "tls-native-tls", "migrate"] }
 tokio = { version = "1.37.0", features = ["macros", "rt-multi-thread"] }
 tower = "0.4.13"
+
+# For more optimized SQLX queries
+[profile.dev.package.sqlx-macros]
+opt-level = 3
+
+[dev-dependencies]
+fake = {version = "2.9.2"}
