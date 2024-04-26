@@ -1,0 +1,1 @@
+INSERT INTO unit (singular_name, plural_name) VALUES ('kilogram', 'kilograms');

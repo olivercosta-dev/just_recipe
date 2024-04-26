@@ -11,5 +11,6 @@ pub async fn new_app(app_state: AppState) -> Router {
     Router::new()
         .route("/", get(health_check))
         .route("/units", post(units))
+        .route("/ingredients", post(ingredients))
         .with_state(app_state)
 }

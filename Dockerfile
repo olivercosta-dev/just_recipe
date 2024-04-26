@@ -14,7 +14,6 @@ RUN apk add --no-cache \
 # Install Rust
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
-
 # Copy manifests
 COPY Cargo.toml Cargo.lock ./
 
@@ -27,9 +26,9 @@ RUN mkdir src/ \
 # Copy the rest of your application source code
 COPY src/ ./src/
 COPY scripts/ ./scripts/
-
 # Final build
 RUN cargo build --release --bin just_recipe
+
 
 # Runtime stage
 FROM alpine:3.16

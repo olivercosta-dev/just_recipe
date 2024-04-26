@@ -1,0 +1,1 @@
+INSERT INTO ingredient (singular_name, plural_name) VALUES ('carrot', 'carrots')
