@@ -1,11 +1,11 @@
 use just_recipe::app::*;
-use sqlx::{PgPool};
+use sqlx::PgPool;
 
 
 
 #[tokio::main]
 async fn main() {
-    
+
     let pool = PgPool::connect("postgres://postgres@localhost/just_recipe")
         .await
         .expect("should have connected to the database");

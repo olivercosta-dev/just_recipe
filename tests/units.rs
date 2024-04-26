@@ -6,7 +6,7 @@ use fake::{Fake, Faker};
 use just_recipe::{app::{new_app, AppState}, routes::Unit};
 
 use serde_json::json;
-use sqlx::{PgPool};
+use sqlx::PgPool;
 use tower::ServiceExt; // for `oneshot`
 
 
