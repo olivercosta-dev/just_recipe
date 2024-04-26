@@ -4,9 +4,9 @@ use axum::{
 };
 use fake::{Fake, Faker};
 use just_recipe::{app::{new_app, AppState}, routes::Unit};
-use serde::Serialize;
+
 use serde_json::json;
-use sqlx::{pool::PoolOptions, postgres::{PgConnectOptions, PgPoolOptions}, PgPool, Postgres};
+use sqlx::{PgPool};
 use tower::ServiceExt; // for `oneshot`
 
 

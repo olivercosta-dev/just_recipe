@@ -1,5 +1,5 @@
 use just_recipe::app::*;
-use sqlx::{postgres::PgConnectOptions, PgPool};
+use sqlx::{PgPool};
 
 
 

@@ -1,6 +1,6 @@
 use axum::{extract::State, http::StatusCode, Json};
 use serde::{Deserialize, Serialize};
-use sqlx::{query, PgPool};
+use sqlx::{query};
 
 use crate::app::AppState;
 
