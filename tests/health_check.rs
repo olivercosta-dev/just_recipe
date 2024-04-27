@@ -17,6 +17,6 @@ async fn health_check_returns_200_ok() {
         .oneshot(Request::builder().uri("/").body(Body::empty()).unwrap())
         .await
         .unwrap();
-    
+
     assert_eq!(response.status(), StatusCode::OK);
 }
