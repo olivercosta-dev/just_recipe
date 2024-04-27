@@ -11,7 +11,7 @@ pub struct RecipeIngredient {
     pub unit_id: i32,
     pub quantity: String
 }
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 pub struct Step {
     #[serde(skip)]
     pub _step_id: i32,
@@ -60,7 +60,10 @@ pub struct Recipe {
 //  TODO (oliver): Better error handling. Not just panics.
 //  TODO (oliver): Maybe the response should contain the recipe id?
 pub async fn recipes(State(app_state) : State<AppState>, Json(recipe): Json<Recipe>) -> StatusCode {
-    
+    if !is_valid_recipe(&recipe) {
+        return StatusCode::UNPROCESSABLE_ENTITY
+    }
+  
     let mut transaction = app_state.pool.begin().await.expect("Should have began transaction");
     
     let recipe_query_result = sqlx::query!(
@@ -82,6 +85,22 @@ pub async fn recipes(State(app_state) : State<AppState>, Json(recipe): Json<Reci
         .expect("Should have inserted all steps into the database");
     transaction.commit().await.expect("Should have committed the transaction");
     StatusCode::OK
+}
+
+fn is_valid_recipe(recipe: &Recipe) -> bool{
+    let mut ordered_recipe_steps = recipe.steps.clone();
+    ordered_recipe_steps.sort_by(|a, b| a.step_number.cmp(&b.step_number));
+    
+    // Only recipes with complete steps (no holes, and in-order) are allowed.
+    if ordered_recipe_steps[0].step_number != 1 {
+        return false;
+    }
+    for index in 0..ordered_recipe_steps.len()- 1 {
+        if ordered_recipe_steps[index].step_number >= ordered_recipe_steps[index + 1].step_number || ordered_recipe_steps[index].step_number + 1 != ordered_recipe_steps[index + 1].step_number{
+            return false;
+        }
+    }
+    true
 }
 
 async fn bulk_insert_ingredients(ingredients: Vec<RecipeIngredient>, recipe_id: i32, transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>) -> Result<(), sqlx::Error>{

@@ -130,18 +130,57 @@ async fn adding_new_recipe_persists_and_returns_200_ok(pool: PgPool) -> sqlx::Re
     Ok(())
 }
 
-// #[sqlx::test]
-// async fn adding_recipe_with_wrong_step_numbers_errors(pool: PgPool) -> sqlx::Result<()> {
-//     let app_state = AppState { pool };
-//     let app = new_app(app_state.clone()).await;
-//     let recipe_name = Faker.fake::<String>();
-//     let description = Faker.fake::<String>();
-//     let (ingredient_id1, unit_id1, quantity1) = (1, 1, String::from("3/4"));
-//     let (step_number1, instruction1) = (1, String::from("Boil the apple in hot water."));
-//     let (step_number2, instruction2) = (2, String::from("Eat the apple."));
+#[sqlx::test(fixtures("units", "ingredients"))]
+async fn adding_recipe_with_wrong_step_numbers_returns_422_unproccessable_entity(pool: PgPool) -> sqlx::Result<()> {
+    let app_state = AppState { pool };
+    let app = new_app(app_state.clone()).await;
+    let recipe_name = Faker.fake::<String>();
+    let description = Faker.fake::<String>();
+    let (ingredient_id1, unit_id1, quantity1) = (1, 1, String::from("3/4"));
+    let (step_number1, instruction1) = (1, Faker.fake::<String>());
+    let (step_number2, instruction2) = (7, Faker.fake::<String>());
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/recipes")
+                .header("Content-type", "application/json")
+                .body(Body::from(
+                    serde_json::to_vec(
+                        &json!(
+                            {
+                                "name": recipe_name,
+                                "description": description,
+                                "ingredients": [
+                                    {
+                                        "ingredient_id": ingredient_id1,
+                                        "unit_id": unit_id1,
+                                        "quantity": quantity1,
+                                    }
+                                ],
+                                "steps": [
+                                    {
+                                        "step_number": step_number1,
+                                        "instruction": instruction1
+                                    },
+                                    {
+                                        "step_number": step_number2,
+                                        "instruction": instruction2
+                                    }
+                                ] 
+                            }
+                        ),
+                    )
+                    .unwrap(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .expect("Should have gotten a valid response.");
+    assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
 
-//     Ok(())
-// }
+    Ok(())
+}
 
 // #[tokio::test]
 // async fn adding_recipe_with_wrong_ingredient_id_errors() {
