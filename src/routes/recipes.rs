@@ -87,9 +87,15 @@ pub async fn recipes(State(app_state) : State<AppState>, Json(recipe): Json<Reci
                 return StatusCode::INTERNAL_SERVER_ERROR;
             }
     }
-    bulk_insert_steps(recipe.steps, recipe_query_result.recipe_id, &mut transaction)
-        .await
-        .expect("Should have inserted all steps into the database");
+    if let Err(sqlx::Error::Database(err)) = 
+        bulk_insert_steps(recipe.steps, recipe_query_result.recipe_id, &mut transaction).await {
+            if err.is_foreign_key_violation() {
+                return StatusCode::UNPROCESSABLE_ENTITY;
+            } else {
+                return StatusCode::INTERNAL_SERVER_ERROR;
+            }
+        }
+        
     transaction.commit().await.expect("Should have committed the transaction");
     StatusCode::OK
 }

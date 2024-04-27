@@ -227,7 +227,49 @@ async fn adding_recipe_with_non_existent_ingredient_id_returns_422_unproccessabl
     assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
     Ok(())
 }
-// #[tokio::test]
-// async fn adding_recipe_with_wrong_unit_id_errors() {
 
-// }
+#[sqlx::test(fixtures("ingredients"))]
+async fn adding_recipe_with_non_existent_unit_id_returns_422_unproccessable_entity(pool: PgPool) -> sqlx::Result<()>{
+    let app_state = AppState { pool };
+    let app = new_app(app_state.clone()).await;
+    let recipe_name = Faker.fake::<String>();
+    let description = Faker.fake::<String>();
+    let (ingredient_id, unit_id, quantity) = (1, Faker.fake::<i32>(), String::from("3/4"));
+    let (step_number, instruction) = (1, Faker.fake::<String>());
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/recipes")
+                .header("Content-type", "application/json")
+                .body(Body::from(
+                    serde_json::to_vec(
+                        &json!(
+                            {
+                                "name": recipe_name,
+                                "description": description,
+                                "ingredients": [
+                                    {
+                                        "ingredient_id": ingredient_id,
+                                        "unit_id": unit_id,
+                                        "quantity": quantity,
+                                    }
+                                ],
+                                "steps": [
+                                    {
+                                        "step_number": step_number,
+                                        "instruction": instruction
+                                    }
+                                ] 
+                            }
+                        ),
+                    )
+                    .unwrap(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .expect("Should have gotten a valid response.");
+    assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
+    Ok(())
+}
