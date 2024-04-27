@@ -26,7 +26,7 @@ pub async fn units(State(app_state) : State<AppState>, Json(unit): Json<Unit>) -
 
     match result {
         Ok(_) => StatusCode::OK,
-        Err(sqlx::Error::Database(_err)) => {
+        Err(sqlx::Error::Database(_)) => {
             StatusCode::CONFLICT
         },
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR
