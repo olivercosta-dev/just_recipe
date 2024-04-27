@@ -1,0 +1,1 @@
+INSERT INTO recipe_ingredient (recipe_id, ingredient_id, unit_id, quantity) VALUES (1, 1, 1, '3/4');

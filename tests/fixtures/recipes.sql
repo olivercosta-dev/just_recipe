@@ -1,0 +1,1 @@
+INSERT INTO recipe (name, description) VALUES ('Apple Pie', 'It is a very tasty Apple Pie!');
