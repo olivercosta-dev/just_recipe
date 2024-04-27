@@ -1,6 +1,5 @@
 use axum::{extract::State, http::StatusCode, Json};
 use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
 
 use crate::app::*;
 
@@ -72,7 +71,7 @@ pub async fn recipes(State(app_state) : State<AppState>, Json(recipe): Json<Reci
         .fetch_one(&mut *transaction)
         .await
         .expect("Should have inserted the recipe into the database");
-    
+
     bulk_insert_ingredients(recipe.ingredients, recipe_query_result.recipe_id, &mut transaction)
         .await
         .expect("Should have inserted all recipe ingredients into database");
