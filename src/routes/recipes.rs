@@ -57,8 +57,10 @@ pub struct Recipe {
     ]
 }
 */
-// TODO (oliver): Better error handling. Not just panics.
+//  TODO (oliver): Better error handling. Not just panics.
+//  TODO (oliver): Maybe the response should contain the recipe id?
 pub async fn recipes(State(app_state) : State<AppState>, Json(recipe): Json<Recipe>) -> StatusCode {
+    
     let mut transaction = app_state.pool.begin().await.expect("Should have began transaction");
     
     let recipe_query_result = sqlx::query!(
