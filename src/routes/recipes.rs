@@ -1,5 +1,6 @@
 use axum::{extract::State, http::StatusCode, Json};
 use serde::{Deserialize, Serialize};
+use sqlx::{error::DatabaseError, postgres::PgDatabaseError};
 
 use crate::app::*;
 
@@ -57,8 +58,9 @@ pub struct Recipe {
     ]
 }
 */
-//  TODO (oliver): Better error handling. Not just panics.
-//  TODO (oliver): Maybe the response should contain the recipe id?
+//  TODO (oliver):  Better error handling. Not just panics.
+// TODO (oliver):   Better error messages, with bodies and messages, not just error codes
+//  TODO (oliver):  Maybe the response should contain the recipe id?
 pub async fn recipes(State(app_state) : State<AppState>, Json(recipe): Json<Recipe>) -> StatusCode {
     if !is_valid_recipe(&recipe) {
         return StatusCode::UNPROCESSABLE_ENTITY
@@ -77,9 +79,14 @@ pub async fn recipes(State(app_state) : State<AppState>, Json(recipe): Json<Reci
         .await
         .expect("Should have inserted the recipe into the database");
 
-    bulk_insert_ingredients(recipe.ingredients, recipe_query_result.recipe_id, &mut transaction)
-        .await
-        .expect("Should have inserted all recipe ingredients into database");
+    if let Err(sqlx::Error::Database(err)) = 
+        bulk_insert_ingredients(recipe.ingredients, recipe_query_result.recipe_id, &mut transaction).await {
+            if err.is_foreign_key_violation() {
+                return StatusCode::UNPROCESSABLE_ENTITY;
+            } else {
+                return StatusCode::INTERNAL_SERVER_ERROR;
+            }
+    }
     bulk_insert_steps(recipe.steps, recipe_query_result.recipe_id, &mut transaction)
         .await
         .expect("Should have inserted all steps into the database");
@@ -103,7 +110,7 @@ fn is_valid_recipe(recipe: &Recipe) -> bool{
     true
 }
 
-async fn bulk_insert_ingredients(ingredients: Vec<RecipeIngredient>, recipe_id: i32, transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>) -> Result<(), sqlx::Error>{
+async fn bulk_insert_ingredients(ingredients: Vec<RecipeIngredient>, recipe_id: i32, transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>) -> sqlx::Result<()>{
     let ingr_ids: Vec<i32>= ingredients.iter().map(|ingr| ingr.ingredient_id).collect();
     let unit_ids: Vec<i32>= ingredients.iter().map(|ingr| ingr.unit_id).collect();
     let quants: Vec<String>= ingredients.iter().map(|ingr| ingr.quantity.clone()).collect();
