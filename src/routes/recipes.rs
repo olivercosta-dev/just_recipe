@@ -29,34 +29,34 @@ pub struct Recipe {
     pub ingredients: Vec<RecipeIngredient>,
     pub steps: Vec<Step>
 }
-/// Example request:
-/// {
-//      "name": "Very Tasty Soup",
-//      "description": "Finger-licking Good!",
-//      "ingredients": [
-//          {
-//              "ingredient_id": 1,
-//              "unit_id": 1,
-//              "quantity": "3/4",
-//          },
-//          {
-//              "ingredient_id": 1,
-//              "unit_id": 2,
-//              "quantity": "1/2",
-//          }
-//      ],
-//      "steps": [
-//          {
-//              "step_number": 1,
-//              "instruction": "Put the apple in boiling hot water."
-//          },
-//          {
-//              "step_number": 2,
-//              "instruction": "Eat the apple."
-//          }
-//      ]
-//  }
-
+/* Example request:
+{
+    "name": "Very Tasty Soup",
+    "description": "Finger-licking Good!",
+    "ingredients": [
+        {
+            "ingredient_id": 1,
+            "unit_id": 1,
+            "quantity": "3/4",
+        },
+        {
+            "ingredient_id": 1,
+            "unit_id": 2,
+            "quantity": "1/2",
+        }
+    ],
+    "steps": [
+        {
+            "step_number": 1,
+            "instruction": "Put the apple in boiling hot water."
+        },
+        {
+            "step_number": 2,
+            "instruction": "Eat the apple."
+        }
+    ]
+}
+*/
 // TODO (oliver): Better error handling. Not just panics.
 pub async fn recipes(State(app_state) : State<AppState>, Json(recipe): Json<Recipe>) -> StatusCode {
     let mut transaction = app_state.pool.begin().await.expect("Should have began transaction");
