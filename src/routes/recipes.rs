@@ -79,18 +79,18 @@ pub async fn recipes(State(app_state) : State<AppState>, Json(recipe): Json<Reci
 
     if let Err(sqlx::Error::Database(err)) = 
         bulk_insert_ingredients(recipe.ingredients, recipe_query_result.recipe_id, &mut transaction).await {
-            if err.is_foreign_key_violation() {
-                return StatusCode::UNPROCESSABLE_ENTITY;
-            } else {
-                return StatusCode::INTERNAL_SERVER_ERROR;
+            let err_kind = err.kind();
+            match err_kind {
+                sqlx::error::ErrorKind::Other => return StatusCode::INTERNAL_SERVER_ERROR,
+                _ => return StatusCode::UNPROCESSABLE_ENTITY,
             }
     }
     if let Err(sqlx::Error::Database(err)) = 
         bulk_insert_steps(recipe.steps, recipe_query_result.recipe_id, &mut transaction).await {
-            if err.is_foreign_key_violation() {
-                return StatusCode::UNPROCESSABLE_ENTITY;
-            } else {
-                return StatusCode::INTERNAL_SERVER_ERROR;
+            let err_kind = err.kind();
+            match err_kind {
+                sqlx::error::ErrorKind::Other => return StatusCode::INTERNAL_SERVER_ERROR,
+                _ => return StatusCode::UNPROCESSABLE_ENTITY,
             }
         }
         
@@ -106,7 +106,8 @@ fn is_valid_recipe(recipe: &Recipe) -> bool{
     if ordered_recipe_steps[0].step_number != 1 {
         return false;
     }
-    for index in 0..ordered_recipe_steps.len()- 1 {
+    // Only recipes with steps in correct order are allowed.
+    for index in 0..ordered_recipe_steps.len() - 1 {
         if ordered_recipe_steps[index].step_number >= ordered_recipe_steps[index + 1].step_number || ordered_recipe_steps[index].step_number + 1 != ordered_recipe_steps[index + 1].step_number{
             return false;
         }

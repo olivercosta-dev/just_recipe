@@ -24,6 +24,30 @@ async fn adding_new_recipe_persists_and_returns_200_ok(pool: PgPool) -> sqlx::Re
         .into_iter()
         .map(|number| json!({"step_number": number, "instruction": Faker.fake::<String>()}))
         .collect();
+
+    // TODO (oliver): Continue this, and choose good ingredient - unit combinations when the other tests are correct
+    // Since the ingredient_id is a serial starting from 1, as well as unit_id, this is allowed.
+    let ingredient_count_in_fixture: i32 =
+        sqlx::query!("SELECT COUNT(*) FROM ingredient GROUP BY ingredient_id")
+            .fetch_one(&app_state.pool)
+            .await
+            .expect("Should have had at least 1 ingredient in the database")
+            .count
+            .expect("Couldn't unwrap ingredient count")
+            .try_into()
+            .unwrap();
+    let unit_count_in_fixture: i32 = sqlx::query!("SELECT COUNT(*) FROM unit GROUP BY unit_id")
+        .fetch_one(&app_state.pool)
+        .await
+        .expect("Should have had at least 1 unit in the database")
+        .count
+        .expect("Couldn't unwrap unit count")
+        .try_into()
+        .unwrap();
+
+    let number_of_ingredients = (1..=ingredient_count_in_fixture).fake::<i32>();
+    let number_of_units = (1..=unit_count_in_fixture).fake::<i32>();
+
     let json = json!(
         {
             "name": recipe_name,
@@ -245,7 +269,7 @@ async fn adding_recipe_with_non_existent_unit_id_returns_422_unproccessable_enti
     let recipe_name = Faker.fake::<String>();
     let description = Faker.fake::<String>();
     let (ingredient_id, unit_id, quantity) = (1, Faker.fake::<i32>(), String::from("3/4"));
-    let (step_number, instruction) = (1, Faker.fake::<String>());
+    let (step_number, instruction) = (1, Faker.fake::<String>()); //TODO (oliver): how many steps shouldn't matter, other places neither!
     let json = json!(
         {
             "name": recipe_name,
@@ -258,6 +282,50 @@ async fn adding_recipe_with_non_existent_unit_id_returns_422_unproccessable_enti
                 }
             ],
             "steps": [
+                {
+                    "step_number": step_number,
+                    "instruction": instruction
+                }
+            ]
+        }
+    );
+    let request = create_post_request_to("recipes", json);
+    let response = app
+        .oneshot(request)
+        .await
+        .expect("Should have gotten a valid response.");
+    assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
+    Ok(())
+}
+
+#[sqlx::test(fixtures("ingredients", "units"))]
+async fn adding_recipe_with_duplicate_ingredient_ids_returns_422_unproccessable_entity(
+    pool: PgPool,
+) -> sqlx::Result<()> {
+    let app_state = AppState { pool };
+    let app = new_app(app_state.clone()).await;
+    let recipe_name = Faker.fake::<String>();
+    let description = Faker.fake::<String>();
+    let (ingredient_id1, unit_id1, quantity1) = (1, 1, String::from("3/4")); // Notice ingredient_id1 and ingredient_id2 are the same.
+    let (ingredient_id2, unit_id2, quantity2) = (1, 1, String::from("1/4"));
+    let (step_number, instruction) = (1, Faker.fake::<String>());
+    let json = json!(
+        {
+            "name": recipe_name,
+            "description": description,
+            "ingredients": [
+                {
+                    "ingredient_id": ingredient_id1,
+                    "unit_id": unit_id1,
+                    "quantity": quantity1,
+                },
+                {
+                    "ingredient_id": ingredient_id2,
+                    "unit_id": unit_id2,
+                    "quantity": quantity2,
+                }
+            ],
+            "steps":[
                 {
                     "step_number": step_number,
                     "instruction": instruction
