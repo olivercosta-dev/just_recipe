@@ -1,7 +1,4 @@
-use axum::{
-    body::Body,
-    http::{Request, StatusCode},
-};
+use axum::http::StatusCode;
 use fake::{Fake, Faker};
 use just_recipe::{
     app::{new_app, AppState},
