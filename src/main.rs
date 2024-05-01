@@ -2,7 +2,6 @@ use just_recipe::app::*;
 use sqlx::PgPool;
 
 
-// TODO (oliver): Better status codes
 #[tokio::main]
 async fn main() {
 
