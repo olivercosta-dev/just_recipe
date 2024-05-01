@@ -1,3 +1,6 @@
+#![allow(dead_code)]
+
+
 use std::collections::HashSet;
 
 use axum::{body::Body, http::Request};
@@ -5,6 +8,7 @@ use fake::{Fake, Faker};
 use just_recipe::routes::{Ingredient, RecipeIngredient, RecipeStep, Unit};
 use serde_json::{json, Value};
 use sqlx::PgPool;
+
 pub fn create_post_request_to(endpoint: &str, json: serde_json::Value) -> Request<Body> {
     Request::builder()
         .method("POST")
@@ -13,6 +17,7 @@ pub fn create_post_request_to(endpoint: &str, json: serde_json::Value) -> Reques
         .body(Body::from(serde_json::to_vec(&json).unwrap()))
         .unwrap()
 }
+
 pub fn create_recipe_steps_json_for_request(steps: Vec<RecipeStep>) -> Vec<Value> {
     steps
         .iter()
