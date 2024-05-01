@@ -3,11 +3,12 @@ use fake::{Fake, Faker};
 use just_recipe::{
     app::{new_app, AppState},
     routes::Ingredient,
-    utils::create_post_request_to,
 };
 use serde_json::json;
 use sqlx::PgPool;
 use tower::ServiceExt;
+mod utils;
+use utils::*;
 
 #[sqlx::test]
 async fn adding_new_ingredient_persists_and_returns_200_ok(pool: PgPool) -> sqlx::Result<()> {
