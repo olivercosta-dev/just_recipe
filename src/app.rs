@@ -6,7 +6,7 @@ use crate::routes::*;
 pub struct AppState {
     pub pool: PgPool
 }
-
+// TODO (oliver): Add tower::catch_panic
 pub async fn new_app(app_state: AppState) -> Router {
     Router::new()
         .route("/", get(health_check))

@@ -11,7 +11,7 @@ pub struct RecipeIngredient {
     pub quantity: String
 }
 #[derive(Serialize, Deserialize, Clone)]
-pub struct Step {
+pub struct RecipeStep {
     #[serde(skip)]
     pub _step_id: i32,
     #[serde(skip)]
@@ -26,7 +26,7 @@ pub struct Recipe {
     pub name: String,
     pub description: String,
     pub ingredients: Vec<RecipeIngredient>,
-    pub steps: Vec<Step>
+    pub steps: Vec<RecipeStep>
 }
 /* Example request:
 {
@@ -57,7 +57,7 @@ pub struct Recipe {
 }
 */
 //  TODO (oliver):  Better error handling. Not just panics.
-//  TODO (oliver):  Better error messages, with bodies and messages, not just error codes
+//  TODO (oliver):  Better error messages, with bodies and messages, not just error codes?
 //  TODO (oliver):  Maybe the response should contain the recipe id?
 pub async fn recipes(State(app_state) : State<AppState>, Json(recipe): Json<Recipe>) -> StatusCode {
     if !is_valid_recipe(&recipe) {
@@ -66,7 +66,7 @@ pub async fn recipes(State(app_state) : State<AppState>, Json(recipe): Json<Reci
   
     let mut transaction = app_state.pool.begin().await.expect("Should have began transaction");
     
-    let recipe_query_result = sqlx::query!(
+    let recipe_query_result = match sqlx::query!(
             r#"
                 INSERT INTO recipe (name, description) VALUES ($1, $2) RETURNING recipe_id
             "#,
@@ -75,8 +75,11 @@ pub async fn recipes(State(app_state) : State<AppState>, Json(recipe): Json<Reci
         )
         .fetch_one(&mut *transaction)
         .await
-        .expect("Should have inserted the recipe into the database");
-
+        {
+            Ok(val) => val,
+            _ => return  StatusCode::INTERNAL_SERVER_ERROR
+        };
+    
     if let Err(sqlx::Error::Database(err)) = 
         bulk_insert_ingredients(recipe.ingredients, recipe_query_result.recipe_id, &mut transaction).await {
             let err_kind = err.kind();
@@ -136,7 +139,7 @@ async fn bulk_insert_ingredients(ingredients: Vec<RecipeIngredient>, recipe_id: 
     Ok(())
 }
 
-async fn bulk_insert_steps(steps: Vec<Step>, recipe_id: i32, transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>) -> Result<(), sqlx::Error> {
+async fn bulk_insert_steps(steps: Vec<RecipeStep>, recipe_id: i32, transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>) -> Result<(), sqlx::Error> {
     let step_numbers: Vec<i32>= steps.iter().map(|step| step.step_number).collect();
     let instructions: Vec<String>= steps.iter().map(|step| step.instruction.clone()).collect();
     let rec_ids: Vec<i32> = (0..step_numbers.len()).map(|_| recipe_id).collect();
