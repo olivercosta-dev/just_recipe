@@ -54,3 +54,27 @@ async fn adding_existing_unit_returns_409_conflict(pool: PgPool) -> sqlx::Result
     assert_eq!(response.status(), StatusCode::CONFLICT);
     Ok(())
 }
+
+#[sqlx::test(fixtures("units"))]
+async fn deleting_existing_unit_gets_removed_returns_200_ok(
+    pool: PgPool,
+) -> sqlx::Result<()> {
+    let app_state = AppState { pool };
+    let app = new_app(app_state.clone()).await;
+    let unit_id = choose_random_unit(&app_state.pool)
+        .await
+        .unit_id;
+    let request = create_delete_request_to("units", json!({"unit_id": unit_id}));
+    let response = app.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let unit_record = sqlx::query!(
+        "SELECT unit_id from unit where unit_id = $1",
+        unit_id
+    )
+    .fetch_optional(&app_state.pool)
+    .await
+    .unwrap();
+    assert!(unit_record.is_none());
+    Ok(())
+}

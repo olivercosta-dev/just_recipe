@@ -36,7 +36,7 @@ async fn adding_new_recipe_persists_and_returns_200_ok(pool: PgPool) -> sqlx::Re
         .oneshot(request)
         .await
         .expect("Should have gotten a valid response.");
-
+    
     assert_eq!(response.status(), StatusCode::OK,);
 
     let recipe_id = assert_recipe_persists(&app_state.pool, &recipe_name, &description).await;
@@ -193,5 +193,42 @@ async fn adding_recipe_with_duplicate_ingredient_ids_returns_422_unproccessable_
         .await
         .expect("Should have gotten a valid response.");
     assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
+    Ok(())
+}
+
+#[sqlx::test(fixtures("units", "ingredients", "recipes", "recipe_ingredients",))]
+async fn deleting_existing_recipe_gets_removed_returns_200_ok(pool: PgPool) -> sqlx::Result<()> {
+    let app_state = AppState { pool };
+    let app = new_app(app_state.clone()).await;
+    let recipe_id = choose_random_recipe_id(&app_state.pool).await;
+    let request = create_delete_request_to("recipes", json!({"recipe_id": recipe_id}));
+    let response = app.oneshot(request).await.unwrap();
+
+    let recipe_record = sqlx::query!(
+        "SELECT recipe_id from recipe where recipe_id = $1",
+        recipe_id
+    )
+    .fetch_optional(&app_state.pool)
+    .await
+    .unwrap();
+    let recipe_steps_records = sqlx::query!(
+        "SELECT recipe_id from step where recipe_id = $1",
+        recipe_id
+    )
+    .fetch_optional(&app_state.pool)
+    .await
+    .unwrap();
+    let recipe_ingredients_records = sqlx::query!(
+        "SELECT recipe_id from recipe_ingredient where recipe_id = $1",
+        recipe_id
+    )
+    .fetch_optional(&app_state.pool)
+    .await
+    .unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+    assert!(recipe_record.is_none());
+    assert!(recipe_ingredients_records.is_none());
+    assert!(recipe_steps_records.is_none());
     Ok(())
 }

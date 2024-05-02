@@ -21,12 +21,17 @@ pub struct RecipeStep {
 }
 #[derive(Serialize, Deserialize)]
 pub struct Recipe {
+    //TODO (oliver): Make all the ids u32, instead of i32 -> ids cannot be negative!
     #[serde(skip)]
     pub recipe_id: i32,
     pub name: String,
     pub description: String,
     pub ingredients: Vec<RecipeIngredient>,
     pub steps: Vec<RecipeStep>,
+}
+#[derive(Deserialize)]
+pub struct RemoveRecipeRequest {
+    pub recipe_id: i32,
 }
 /* Example request:
 {
@@ -56,7 +61,10 @@ pub struct Recipe {
     ]
 }
 */
-pub async fn recipes(State(app_state): State<AppState>, Json(recipe): Json<Recipe>) -> StatusCode {
+pub async fn add_recipe(
+    State(app_state): State<AppState>,
+    Json(recipe): Json<Recipe>,
+) -> StatusCode {
     if !is_valid_recipe(&recipe) {
         return StatusCode::UNPROCESSABLE_ENTITY;
     }
@@ -108,7 +116,7 @@ pub async fn recipes(State(app_state): State<AppState>, Json(recipe): Json<Recip
     }
     match transaction.commit().await {
         Ok(_) => StatusCode::OK,
-        Err(_) => StatusCode::INTERNAL_SERVER_ERROR
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
     }
 }
 
@@ -132,6 +140,7 @@ fn is_valid_recipe(recipe: &Recipe) -> bool {
     true
 }
 
+// TODO (oliver): Perhaps unit test these.
 async fn bulk_insert_ingredients(
     ingredients: Vec<RecipeIngredient>,
     recipe_id: i32,
@@ -147,9 +156,9 @@ async fn bulk_insert_ingredients(
 
     sqlx::query!(
         r#"
-                INSERT INTO recipe_ingredient (recipe_id, ingredient_id, unit_id, quantity)
-                SELECT * FROM UNNEST($1::INT[], $2::INT[], $3::INT[], $4::VARCHAR(50)[]);
-            "#,
+            INSERT INTO recipe_ingredient (recipe_id, ingredient_id, unit_id, quantity)
+            SELECT * FROM UNNEST($1::INT[], $2::INT[], $3::INT[], $4::VARCHAR(50)[]);
+        "#,
         &rec_ids,
         &ingr_ids,
         &unit_ids,
@@ -181,4 +190,20 @@ async fn bulk_insert_steps(
     .execute(&mut **transaction)
     .await?;
     Ok(())
+}
+
+pub async fn remove_recipe(
+    State(app_state): State<AppState>,
+    Json(remove_recipe_request): Json<RemoveRecipeRequest>,
+) -> StatusCode {
+    match sqlx::query!(
+        "DELETE FROM recipe WHERE recipe_id = $1",
+        remove_recipe_request.recipe_id
+    )
+    .execute(&app_state.pool)
+    .await
+    {
+        Ok(_) => StatusCode::OK,
+        Err(_)=> StatusCode::INTERNAL_SERVER_ERROR,
+    }
 }

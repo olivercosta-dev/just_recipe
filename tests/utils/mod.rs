@@ -1,6 +1,5 @@
 #![allow(dead_code)]
 
-
 use std::collections::HashSet;
 
 use axum::{body::Body, http::Request};
@@ -12,6 +11,15 @@ use sqlx::PgPool;
 pub fn create_post_request_to(endpoint: &str, json: serde_json::Value) -> Request<Body> {
     Request::builder()
         .method("POST")
+        .uri(format!("/{}", endpoint))
+        .header("Content-type", "application/json")
+        .body(Body::from(serde_json::to_vec(&json).unwrap()))
+        .unwrap()
+}
+
+pub fn create_delete_request_to(endpoint: &str, json: serde_json::Value) -> Request<Body> {
+    Request::builder()
+        .method("DELETE")
         .uri(format!("/{}", endpoint))
         .header("Content-type", "application/json")
         .body(Body::from(serde_json::to_vec(&json).unwrap()))
@@ -160,10 +168,11 @@ pub fn generate_random_recipe_ingredients(
         let random_index = (0..ingredients.len().try_into().unwrap()).fake::<usize>();
         let ingr_id = ingredients[random_index].ingredient_id;
         if ingredient_ids.insert(ingr_id) {
+            let random_unit_index = (0..units.len().try_into().unwrap()).fake::<usize>();
             let recipe_ingredient = RecipeIngredient {
                 _recipe_id: 0,
                 ingredient_id: ingr_id,
-                unit_id: (0..units.len().try_into().unwrap()).fake::<i32>(),
+                unit_id: units[random_unit_index].unit_id,
                 quantity: Faker.fake::<String>(),
             };
             recipe_ingredients.push(recipe_ingredient)
@@ -197,4 +206,39 @@ pub async fn fetch_ingredients_and_units(pool: &PgPool) -> (Vec<Ingredient>, Vec
         .expect("Should have had at least 1 unit in the database");
 
     (all_ingredients, all_units)
+}
+
+pub async fn choose_random_ingredient(pool: &PgPool) -> Ingredient {
+    let ingredients = sqlx::query_as!(Ingredient, "SELECT * from ingredient")
+        .fetch_all(pool)
+        .await
+        .expect("No ingredients were found.");
+    let random_index = (0..ingredients.len()).fake::<usize>();
+    Ingredient {
+        ingredient_id: ingredients[random_index].ingredient_id,
+        singular_name: ingredients[random_index].singular_name.clone(),
+        plural_name: ingredients[random_index].plural_name.clone(),
+    }
+}
+
+pub async fn choose_random_unit(pool: &PgPool) -> Unit {
+    let units = sqlx::query_as!(Unit, "SELECT * from unit")
+        .fetch_all(pool)
+        .await
+        .expect("No units were found.");
+    let random_index = (0..units.len()).fake::<usize>();
+    Unit {
+        unit_id: units[random_index].unit_id,
+        singular_name: units[random_index].singular_name.clone(),
+        plural_name: units[random_index].plural_name.clone(),
+    }
+}
+
+pub async fn choose_random_recipe_id(pool: &PgPool) -> i32 {
+    let recipes = sqlx::query!("SELECT recipe_id from recipe")
+        .fetch_all(pool)
+        .await
+        .expect("No recipes were found.");
+    let random_index: usize = (0..recipes.len()).fake::<usize>();
+    recipes[random_index].recipe_id
 }
