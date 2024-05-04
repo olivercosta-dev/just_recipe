@@ -31,7 +31,7 @@ pub async fn add_ingredient(
     .await;
 
     match result {
-        Ok(_) => StatusCode::OK,
+        Ok(_) => StatusCode::NO_CONTENT,
         Err(sqlx::Error::Database(_)) => StatusCode::CONFLICT,
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
     }
@@ -47,7 +47,7 @@ pub async fn remove_ingredient(
     )
     .execute(&app_state.pool)
     .await{
-        Ok(_) => StatusCode::OK,
+        Ok(_) => StatusCode::NO_CONTENT,
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR
     }
 }

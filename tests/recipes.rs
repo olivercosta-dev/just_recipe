@@ -9,7 +9,7 @@ use tower::ServiceExt;
 use utils::*;
 
 #[sqlx::test(fixtures("units", "ingredients"))]
-async fn adding_new_recipe_persists_and_returns_200_ok(pool: PgPool) -> sqlx::Result<()> {
+async fn adding_new_recipe_persists_and_returns_204_no_content(pool: PgPool) -> sqlx::Result<()> {
     let app_state = AppState { pool };
     let app = new_app(app_state.clone()).await;
 
@@ -37,7 +37,7 @@ async fn adding_new_recipe_persists_and_returns_200_ok(pool: PgPool) -> sqlx::Re
         .await
         .expect("Should have gotten a valid response.");
     
-    assert_eq!(response.status(), StatusCode::OK,);
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
 
     let recipe_id = assert_recipe_persists(&app_state.pool, &recipe_name, &description).await;
 
@@ -197,7 +197,7 @@ async fn adding_recipe_with_duplicate_ingredient_ids_returns_422_unproccessable_
 }
 
 #[sqlx::test(fixtures("units", "ingredients", "recipes", "recipe_ingredients",))]
-async fn deleting_existing_recipe_gets_removed_returns_200_ok(pool: PgPool) -> sqlx::Result<()> {
+async fn deleting_existing_recipe_gets_removed_returns_204_ok(pool: PgPool) -> sqlx::Result<()> {
     let app_state = AppState { pool };
     let app = new_app(app_state.clone()).await;
     let recipe_id = choose_random_recipe_id(&app_state.pool).await;
@@ -226,7 +226,7 @@ async fn deleting_existing_recipe_gets_removed_returns_200_ok(pool: PgPool) -> s
     .await
     .unwrap();
 
-    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
     assert!(recipe_record.is_none());
     assert!(recipe_ingredients_records.is_none());
     assert!(recipe_steps_records.is_none());

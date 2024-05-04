@@ -12,7 +12,7 @@ mod utils;
 use utils::*;
 
 #[sqlx::test]
-async fn adding_new_unit_persists_and_returns_200_ok(pool: PgPool) -> sqlx::Result<()> {
+async fn adding_new_unit_persists_and_returns_204_no_content(pool: PgPool) -> sqlx::Result<()> {
     let app_state = AppState { pool };
     let app = new_app(app_state.clone()).await;
     let singular_name = Faker.fake::<String>();
@@ -36,7 +36,7 @@ async fn adding_new_unit_persists_and_returns_200_ok(pool: PgPool) -> sqlx::Resu
     .unwrap();
     assert_eq!(query_result.singular_name, singular_name);
     assert_eq!(query_result.plural_name, plural_name);
-    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
     Ok(())
 }
 
@@ -56,7 +56,7 @@ async fn adding_existing_unit_returns_409_conflict(pool: PgPool) -> sqlx::Result
 }
 
 #[sqlx::test(fixtures("units"))]
-async fn deleting_existing_unit_gets_removed_returns_200_ok(
+async fn deleting_existing_unit_gets_removed_returns_204_no_content(
     pool: PgPool,
 ) -> sqlx::Result<()> {
     let app_state = AppState { pool };
@@ -66,7 +66,7 @@ async fn deleting_existing_unit_gets_removed_returns_200_ok(
         .unit_id;
     let request = create_delete_request_to("units", json!({"unit_id": unit_id}));
     let response = app.oneshot(request).await.unwrap();
-    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
 
     let unit_record = sqlx::query!(
         "SELECT unit_id from unit where unit_id = $1",

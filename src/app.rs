@@ -10,7 +10,6 @@ use tower_http::catch_panic::CatchPanicLayer;
 pub struct AppState {
     pub pool: PgPool,
 }
-//  TODO (oliver): Make the 200 OK error codes into NO content error codes?
 pub async fn new_app(app_state: AppState) -> Router {
     Router::new()
         .route("/", get(health_check))

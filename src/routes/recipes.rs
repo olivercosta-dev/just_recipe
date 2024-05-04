@@ -21,7 +21,6 @@ pub struct RecipeStep {
 }
 #[derive(Serialize, Deserialize)]
 pub struct Recipe {
-    //TODO (oliver): Make all the ids u32, instead of i32 -> ids cannot be negative!
     #[serde(skip)]
     pub recipe_id: i32,
     pub name: String,
@@ -115,7 +114,7 @@ pub async fn add_recipe(
         }
     }
     match transaction.commit().await {
-        Ok(_) => StatusCode::OK,
+        Ok(_) => StatusCode::NO_CONTENT,
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
     }
 }
@@ -203,7 +202,7 @@ pub async fn remove_recipe(
     .execute(&app_state.pool)
     .await
     {
-        Ok(_) => StatusCode::OK,
+        Ok(_) => StatusCode::NO_CONTENT,
         Err(_)=> StatusCode::INTERNAL_SERVER_ERROR,
     }
 }

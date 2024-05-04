@@ -29,7 +29,7 @@ pub async fn add_unit(State(app_state) : State<AppState>, Json(unit): Json<Unit>
     .await;
 
     match result {
-        Ok(_) => StatusCode::OK,
+        Ok(_) => StatusCode::NO_CONTENT,
         Err(sqlx::Error::Database(_)) => {
             StatusCode::CONFLICT
         },
@@ -47,7 +47,7 @@ pub async fn remove_unit(
     )
     .execute(&app_state.pool)
     .await{
-        Ok(_) => StatusCode::OK,
+        Ok(_) => StatusCode::NO_CONTENT,
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR
     }
 }
