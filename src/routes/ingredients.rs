@@ -1,4 +1,8 @@
-use axum::{extract::State, http::StatusCode, Json};
+use axum::{
+    extract::{Path, State},
+    http::StatusCode,
+    Json,
+};
 use serde::{Deserialize, Serialize};
 use sqlx::{postgres::PgQueryResult, query};
 
@@ -46,8 +50,27 @@ pub async fn remove_ingredient(
         delete_ingredient_request.ingredient_id
     )
     .execute(&app_state.pool)
-    .await{
+    .await
+    {
         Ok(_) => StatusCode::NO_CONTENT,
-        Err(_) => StatusCode::INTERNAL_SERVER_ERROR
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+pub async fn update_ingredient(
+    State(app_state): State<AppState>,
+    Path(ingredient_id): Path<i32>,
+    Json(ingredient): Json<Ingredient>,
+) -> StatusCode {
+    match sqlx::query!(
+        "UPDATE ingredient SET singular_name = $1, plural_name = $2 WHERE ingredient_id = $3",
+        ingredient.singular_name,
+        ingredient.plural_name,
+        ingredient_id,
+    )
+    .execute(&app_state.pool)
+    .await
+    {
+        Ok(_) => StatusCode::NO_CONTENT,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
     }
 }

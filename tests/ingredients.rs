@@ -53,14 +53,18 @@ async fn adding_existing_ingredient_returns_409_conflict(pool: PgPool) -> sqlx::
 }
 
 #[sqlx::test(fixtures("ingredients"))]
-async fn deleting_existing_ingredient_gets_removed_returns_204_no_content(pool: PgPool) -> sqlx::Result<()> {
+async fn deleting_existing_ingredient_gets_removed_returns_204_no_content(
+    pool: PgPool,
+) -> sqlx::Result<()> {
     let app_state = AppState { pool };
     let app = new_app(app_state.clone()).await;
-    let ingredient_id = choose_random_ingredient(&app_state.pool).await.ingredient_id;
+    let ingredient_id = choose_random_ingredient(&app_state.pool)
+        .await
+        .ingredient_id;
     let request = create_delete_request_to("ingredients", json!({"ingredient_id": ingredient_id}));
     let response = app.oneshot(request).await.unwrap();
     assert_eq!(response.status(), StatusCode::NO_CONTENT);
-    
+
     let ingredient_record = sqlx::query!(
         "SELECT ingredient_id from ingredient where ingredient_id = $1",
         ingredient_id
@@ -69,5 +73,39 @@ async fn deleting_existing_ingredient_gets_removed_returns_204_no_content(pool: 
     .await
     .unwrap();
     assert!(ingredient_record.is_none());
+    Ok(())
+}
+#[sqlx::test(fixtures("ingredients"))]
+async fn updating_existing_ingredient_gets_updated_returns_204_no_content(
+    pool: PgPool,
+) -> sqlx::Result<()> {
+    let app_state = AppState { pool };
+    let app = new_app(app_state.clone()).await;
+    let ingredient_id = choose_random_ingredient(&app_state.pool)
+        .await
+        .ingredient_id;
+    let singular_name = Faker.fake::<String>();
+    let plural_name = Faker.fake::<String>();
+    let json = json!({"singular_name": singular_name, "plural_name": plural_name});
+    let request = create_put_request_to("ingredients", ingredient_id, json);
+    let response = app.oneshot(request).await.unwrap();
+
+    let query_result = sqlx::query_as!(
+        Ingredient,
+        r#"
+            SELECT ingredient_id, singular_name, plural_name
+            FROM ingredient
+            WHERE ingredient_id = $1
+        "#,
+        ingredient_id,
+    )
+    .fetch_one(&app_state.pool)
+    .await
+    .expect("Ingredient id should have existed");
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
+    assert_eq!(
+        (query_result.singular_name, query_result.plural_name),
+        (singular_name, plural_name)
+    );
     Ok(())
 }

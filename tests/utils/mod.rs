@@ -26,6 +26,16 @@ pub fn create_delete_request_to(endpoint: &str, json: serde_json::Value) -> Requ
         .unwrap()
 }
 
+pub fn create_put_request_to(endpoint: &str, resource_id: i32, json: serde_json::Value) -> Request<Body> {
+    Request::builder()
+    .method("PUT")
+    .uri(format!("/{}/{}", endpoint, resource_id))
+    .header("Content-type", "application/json")
+    .body(Body::from(serde_json::to_vec(&json).unwrap()))
+    .unwrap()
+}
+
+
 pub fn create_recipe_steps_json_for_request(steps: Vec<RecipeStep>) -> Vec<Value> {
     steps
         .iter()
@@ -37,6 +47,7 @@ pub fn create_recipe_steps_json_for_request(steps: Vec<RecipeStep>) -> Vec<Value
         })
         .collect()
 }
+
 
 pub fn generate_random_number_of_steps() -> Vec<RecipeStep> {
     let number_of_steps = (2..10).fake::<i32>();
