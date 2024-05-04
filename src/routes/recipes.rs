@@ -139,7 +139,7 @@ fn is_valid_recipe(recipe: &Recipe) -> bool {
     true
 }
 
-// TODO (oliver): Perhaps unit test these.
+// TODO (oliver): Perhaps unit test the utility functions?
 async fn bulk_insert_ingredients(
     ingredients: Vec<RecipeIngredient>,
     recipe_id: i32,
