@@ -110,4 +110,18 @@ async fn updating_existing_ingredient_gets_updated_returns_204_no_content(
     Ok(())
 }
 
-// TODO updating_non_existing_ingredient_returns_404_not_found
+#[sqlx::test(fixtures("ingredients"))]
+async fn updating_non_existing_ingredient_returns_404_not_found(
+    pool: PgPool,
+) -> sqlx::Result<()> {
+    let app_state = AppState { pool };
+    let app = new_app(app_state.clone()).await;
+    let ingredient_id = -1; // This ingredient_id will never exist, as they are always positive
+    let singular_name = Faker.fake::<String>();
+    let plural_name = Faker.fake::<String>();
+    let json = json!({"singular_name": singular_name, "plural_name": plural_name});
+    let request = create_put_request_to("ingredients", ingredient_id, json);
+    let response = app.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    Ok(())
+}

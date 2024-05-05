@@ -70,7 +70,13 @@ pub async fn update_ingredient(
     .execute(&app_state.pool)
     .await
     {
-        Ok(_) => StatusCode::NO_CONTENT,
+        Ok(result) => {
+            if result.rows_affected() == 0 {
+                StatusCode::NOT_FOUND
+            } else {
+                StatusCode::NO_CONTENT
+            }
+        }
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
     }
 }
