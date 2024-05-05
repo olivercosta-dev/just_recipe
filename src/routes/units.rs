@@ -1,4 +1,4 @@
-use axum::{extract::State, http::StatusCode,Json};
+use axum::{extract::{Path, State}, http::StatusCode,Json};
 use serde::{Deserialize, Serialize};
 use sqlx::{postgres::PgQueryResult, query};
 
@@ -49,5 +49,24 @@ pub async fn remove_unit(
     .await{
         Ok(_) => StatusCode::NO_CONTENT,
         Err(_) => StatusCode::INTERNAL_SERVER_ERROR
+    }
+}
+
+pub async fn update_unit(
+    State(app_state): State<AppState>,
+    Path(unit_id): Path<i32>,
+    Json(unit): Json<Unit>,
+) -> StatusCode {
+    match sqlx::query!(
+        "UPDATE unit SET singular_name = $1, plural_name = $2 WHERE unit_id = $3",
+        unit.singular_name,
+        unit.plural_name,
+        unit_id,
+    )
+    .execute(&app_state.pool)
+    .await
+    {
+        Ok(_) => StatusCode::NO_CONTENT,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
     }
 }
