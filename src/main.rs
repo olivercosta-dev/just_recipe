@@ -1,7 +1,7 @@
 use just_recipe::app::*;
 use sqlx::PgPool;
 
-
+// TODO (oliver): I need to implemenet error propagation to use with the operator "?"
 #[tokio::main]
 async fn main() {
 

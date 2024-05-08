@@ -36,13 +36,13 @@ async fn adding_new_recipe_persists_and_returns_204_no_content(pool: PgPool) -> 
         .oneshot(request)
         .await
         .expect("Should have gotten a valid response.");
-    
+
     assert_eq!(response.status(), StatusCode::NO_CONTENT);
 
-    let recipe_id = assert_recipe_persists(&app_state.pool, &recipe_name, &description).await;
+    let recipe_id = assert_recipe_exists(&app_state.pool, &recipe_name, &description).await;
 
-    assert_recipe_ingredients_persist(&app_state.pool, recipe_ingredients, recipe_id).await;
-    assert_recipe_steps_persist(&app_state.pool, recipe_steps, recipe_id).await;
+    assert_recipe_ingredients_exist(&app_state.pool, recipe_ingredients, recipe_id).await;
+    assert_recipe_steps_exist(&app_state.pool, recipe_steps, recipe_id).await;
 
     Ok(())
 }
@@ -196,8 +196,11 @@ async fn adding_recipe_with_duplicate_ingredient_ids_returns_422_unproccessable_
     Ok(())
 }
 
-#[sqlx::test(fixtures("units", "ingredients", "recipes", "recipe_ingredients",))]
-async fn deleting_existing_recipe_gets_removed_returns_204_ok(pool: PgPool) -> sqlx::Result<()> {
+
+#[sqlx::test(fixtures("units", "ingredients", "recipes", "recipe_ingredients", "steps"))]
+async fn deleting_existing_recipe_gets_removed_returns_204_content(
+    pool: PgPool,
+) -> sqlx::Result<()> {
     let app_state = AppState { pool };
     let app = new_app(app_state.clone()).await;
     let recipe_id = choose_random_recipe_id(&app_state.pool).await;
@@ -205,21 +208,19 @@ async fn deleting_existing_recipe_gets_removed_returns_204_ok(pool: PgPool) -> s
     let response = app.oneshot(request).await.unwrap();
 
     let recipe_record = sqlx::query!(
-        "SELECT recipe_id from recipe where recipe_id = $1",
+        "SELECT recipe_id FROM recipe WHERE recipe_id = $1",
         recipe_id
     )
     .fetch_optional(&app_state.pool)
     .await
     .unwrap();
-    let recipe_steps_records = sqlx::query!(
-        "SELECT recipe_id from step where recipe_id = $1",
-        recipe_id
-    )
-    .fetch_optional(&app_state.pool)
-    .await
-    .unwrap();
+    let recipe_steps_records =
+        sqlx::query!("SELECT recipe_id FROM step WHERE recipe_id = $1", recipe_id)
+            .fetch_optional(&app_state.pool)
+            .await
+            .unwrap();
     let recipe_ingredients_records = sqlx::query!(
-        "SELECT recipe_id from recipe_ingredient where recipe_id = $1",
+        "SELECT recipe_id FROM recipe_ingredient WHERE recipe_id = $1",
         recipe_id
     )
     .fetch_optional(&app_state.pool)
@@ -232,3 +233,32 @@ async fn deleting_existing_recipe_gets_removed_returns_204_ok(pool: PgPool) -> s
     assert!(recipe_steps_records.is_none());
     Ok(())
 }
+
+#[sqlx::test(fixtures("units", "ingredients", "recipes", "recipe_ingredients"))]
+async fn updating_existing_recipe_gets_updated_returns_204_no_content(
+    pool: PgPool,
+) -> sqlx::Result<()> {
+    let app_state = AppState { pool };
+    let app = new_app(app_state.clone()).await;
+    let recipe_id = choose_random_recipe_id(&app_state.pool).await;
+    let recipe_name = Faker.fake::<String>();
+    let recipe_description = Faker.fake::<String>();
+    let (ingredients, units) = fetch_ingredients_and_units(&app_state.pool).await;
+    let recipe_ingredients = create_recipe_ingredients_json(&generate_random_recipe_ingredients(units, ingredients));
+    let recipe_steps = create_recipe_steps_json_for_request(generate_random_number_of_steps());
+    let json = json!({
+        "recipe_id": recipe_id,
+        "name": recipe_name,
+        "description": recipe_description,
+        "ingredients": recipe_ingredients,
+        "steps":recipe_steps
+    });
+    let request = create_put_request_to("recipes", recipe_id, json);
+    let response = app.oneshot(request).await.unwrap(); 
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
+    assert_recipe_exists(&app_state.pool, &recipe_name, &recipe_description).await;
+    assert_recipe_steps_exist(&app_state.pool, recipe_steps, recipe_id).await;
+    assert_recipe_ingredients_exist(&app_state.pool, recipe_ingredients, recipe_id).await;
+    Ok(())
+}
+// TODO (oliver): updating_non_existing_recipe_returns 404_not_found(){}

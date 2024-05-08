@@ -62,7 +62,7 @@ pub fn generate_random_number_of_steps() -> Vec<RecipeStep> {
 }
 
 // Returns the persisted recipe_id
-pub async fn assert_recipe_persists(pool: &PgPool, recipe_name: &str, description: &str) -> i32 {
+pub async fn assert_recipe_exists(pool: &PgPool, recipe_name: &str, description: &str) -> i32 {
     let recipe_record = sqlx::query!(
         r#"
                 SELECT recipe_id, name, description
@@ -86,7 +86,7 @@ pub async fn assert_recipe_persists(pool: &PgPool, recipe_name: &str, descriptio
     recipe_record.recipe_id
 }
 
-pub async fn assert_recipe_ingredients_persist(
+pub async fn assert_recipe_ingredients_exist(
     pool: &PgPool,
     recipe_ingredients: Vec<Value>,
     recipe_id: i32,
@@ -127,7 +127,7 @@ pub async fn assert_recipe_ingredients_persist(
     }
 }
 
-pub async fn assert_recipe_steps_persist(pool: &PgPool, recipe_steps: Vec<Value>, recipe_id: i32) {
+pub async fn assert_recipe_steps_exist(pool: &PgPool, recipe_steps: Vec<Value>, recipe_id: i32) {
     let ordered_recipe_step_records = sqlx::query!(
         r#"
                 SELECT step_id, recipe_id, step_number, instruction

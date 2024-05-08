@@ -1,6 +1,12 @@
 use crate::app::*;
-use axum::{extract::State, http::StatusCode, Json};
+use axum::{
+    extract::{Path, State},
+    http::StatusCode,
+    Json,
+};
 use serde::{Deserialize, Serialize};
+use serde_json::de;
+use sqlx::postgres::PgQueryResult;
 
 #[derive(Serialize, Deserialize)]
 pub struct RecipeIngredient {
@@ -75,8 +81,8 @@ pub async fn add_recipe(
 
     let recipe_query_result = match sqlx::query!(
         r#"
-                INSERT INTO recipe (name, description) VALUES ($1, $2) RETURNING recipe_id
-            "#,
+            INSERT INTO recipe (name, description) VALUES ($1, $2) RETURNING recipe_id
+        "#,
         recipe.name,
         recipe.description
     )
@@ -144,7 +150,7 @@ async fn bulk_insert_ingredients(
     ingredients: Vec<RecipeIngredient>,
     recipe_id: i32,
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-) -> sqlx::Result<()> {
+) -> sqlx::Result<PgQueryResult, sqlx::Error> {
     let ingr_ids: Vec<i32> = ingredients.iter().map(|ingr| ingr.ingredient_id).collect();
     let unit_ids: Vec<i32> = ingredients.iter().map(|ingr| ingr.unit_id).collect();
     let quants: Vec<String> = ingredients
@@ -153,7 +159,7 @@ async fn bulk_insert_ingredients(
         .collect();
     let rec_ids: Vec<i32> = (0..ingr_ids.len()).map(|_| recipe_id).collect();
 
-    sqlx::query!(
+    let query_result = sqlx::query!(
         r#"
             INSERT INTO recipe_ingredient (recipe_id, ingredient_id, unit_id, quantity)
             SELECT * FROM UNNEST($1::INT[], $2::INT[], $3::INT[], $4::VARCHAR(50)[]);
@@ -165,19 +171,19 @@ async fn bulk_insert_ingredients(
     )
     .execute(&mut **transaction)
     .await?;
-    Ok(())
+    Ok(query_result)
 }
 
 async fn bulk_insert_steps(
     steps: Vec<RecipeStep>,
     recipe_id: i32,
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
-) -> Result<(), sqlx::Error> {
+) -> Result<PgQueryResult, sqlx::Error> {
     let step_numbers: Vec<i32> = steps.iter().map(|step| step.step_number).collect();
     let instructions: Vec<String> = steps.iter().map(|step| step.instruction.clone()).collect();
     let rec_ids: Vec<i32> = (0..step_numbers.len()).map(|_| recipe_id).collect();
 
-    sqlx::query!(
+    let query_result = sqlx::query!(
         r#"
                 INSERT INTO step (recipe_id, step_number, instruction)
                 SELECT * FROM UNNEST($1::INT[], $2::INT[], $3::TEXT[]);
@@ -188,9 +194,10 @@ async fn bulk_insert_steps(
     )
     .execute(&mut **transaction)
     .await?;
-    Ok(())
+    Ok(query_result)
 }
 
+// Deleting a recipe_id will cascade on a database level.
 pub async fn remove_recipe(
     State(app_state): State<AppState>,
     Json(remove_recipe_request): Json<RemoveRecipeRequest>,
@@ -203,6 +210,71 @@ pub async fn remove_recipe(
     .await
     {
         Ok(_) => StatusCode::NO_CONTENT,
-        Err(_)=> StatusCode::INTERNAL_SERVER_ERROR,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
+    }
+}
+
+
+pub async fn update_recipe(
+    State(app_state): State<AppState>,
+    Path(recipe_id): Path<i32>,
+    Json(recipe): Json<Recipe>,
+) -> StatusCode {
+    if !is_valid_recipe(&recipe) {
+        return StatusCode::UNPROCESSABLE_ENTITY;
+    }
+
+    let mut transaction = match app_state.pool.begin().await {
+        Ok(tr) => tr,
+        Err(_) => return StatusCode::INTERNAL_SERVER_ERROR,
+    };
+    let recipe_query_result = match sqlx::query!(
+        r#"
+            UPDATE recipe
+            SET name = $1, description = $2 
+            WHERE recipe_id = $3 AND (name IS DISTINCT FROM $1 OR description IS DISTINCT FROM $2)
+        "#,
+        recipe.name,
+        recipe.description,
+        recipe_id
+    )
+    .execute(&mut *transaction)
+    .await
+    {
+        Ok(val) => val,
+        _ => return StatusCode::INTERNAL_SERVER_ERROR,
+    };
+    if recipe_query_result.rows_affected() == 0 {
+        return StatusCode::NOT_FOUND;
+    }
+    let delete_result = sqlx::query!(
+        r#"
+            DELETE FROM recipe_ingredient 
+            WHERE recipe_id = $1
+        "#, recipe_id
+    ).execute(&app_state.pool).await;
+    if delete_result.is_err(){
+        return StatusCode::INTERNAL_SERVER_ERROR;
+    }
+    let insert_result = bulk_insert_ingredients(recipe.ingredients, recipe_id, &mut transaction).await;
+    if insert_result.is_err(){
+        return StatusCode::INTERNAL_SERVER_ERROR;
+    }
+    let step_delete_result = sqlx::query!(
+        r#"
+            DELETE FROM step 
+            WHERE recipe_id = $1
+        "#, recipe_id
+    ).execute(&app_state.pool).await;
+    if delete_result.is_err(){
+        return StatusCode::INTERNAL_SERVER_ERROR;
+    }
+    let insert_result = bulk_insert_steps(recipe.steps, recipe_id, &mut transaction).await;
+    if insert_result.is_err(){
+        return StatusCode::INTERNAL_SERVER_ERROR;
+    }
+    match transaction.commit().await {
+        Ok(_) => StatusCode::NO_CONTENT,
+        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
     }
 }
