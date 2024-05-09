@@ -261,4 +261,29 @@ async fn updating_existing_recipe_gets_updated_returns_204_no_content(
     assert_recipe_ingredients_exist(&app_state.pool, recipe_ingredients, recipe_id).await;
     Ok(())
 }
-// TODO (oliver): updating_non_existing_recipe_returns 404_not_found(){}
+
+#[sqlx::test(fixtures("units", "ingredients", "recipes", "recipe_ingredients"))]
+async fn updating_non_existing_recipe_returns_404_not_found(
+    pool: PgPool,
+) -> sqlx::Result<()> {
+    let app_state = AppState { pool };
+    let app = new_app(app_state.clone()).await;
+    let recipe_id = -1;
+    let recipe_name = Faker.fake::<String>();
+    let recipe_description = Faker.fake::<String>();
+    let (ingredients, units) = fetch_ingredients_and_units(&app_state.pool).await;
+    let recipe_ingredients = create_recipe_ingredients_json(&generate_random_recipe_ingredients(units, ingredients));
+    let recipe_steps = create_recipe_steps_json_for_request(generate_random_number_of_steps());
+    let json = json!({
+        "recipe_id": recipe_id,
+        "name": recipe_name,
+        "description": recipe_description,
+        "ingredients": recipe_ingredients,
+        "steps":recipe_steps
+    });
+    let request = create_put_request_to("recipes", recipe_id, json);
+    let response = app.oneshot(request).await.unwrap(); 
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    
+    Ok(())
+}

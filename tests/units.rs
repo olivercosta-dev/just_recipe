@@ -113,7 +113,6 @@ async fn updating_existing_unit_gets_updated_returns_204_no_content(
     Ok(())
 }
 
-// TODO updating_non_existing_unit_returns_404_not_found
 #[sqlx::test(fixtures("units"))]
 async fn updating_non_existing_unit_returns_404_not_found(
     pool: PgPool,
