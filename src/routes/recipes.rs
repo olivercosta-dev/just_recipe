@@ -5,7 +5,6 @@ use axum::{
     Json,
 };
 use serde::{Deserialize, Serialize};
-use serde_json::de;
 use sqlx::postgres::PgQueryResult;
 
 #[derive(Serialize, Deserialize)]
