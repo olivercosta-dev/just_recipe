@@ -1,4 +1,5 @@
 use crate::app::AppError;
+use dashmap::{DashMap, DashSet};
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize)]
@@ -47,6 +48,38 @@ pub enum RecipeParsingError {
     InvalidUnitId,
     InvalidIngredientId,
     DuplicateIngredientId,
+}
+impl Recipe {
+    /// Returns a fully-valid recipe, whose ingredients
+    /// are backed by the database.
+    pub fn parse(
+        unchecked_recipe: UncheckedRecipe,
+        unit_ids: &DashSet<i32>,
+        ingredient_ids: &DashSet<i32>,
+    ) -> Result<Self, AppError> {
+        let recipe: Recipe = unchecked_recipe.try_into()?;
+        let contains_invalid_ingredient_id = recipe
+            .ingredients
+            .iter()
+            .find(|recipe_ingredient| !ingredient_ids.contains(&recipe_ingredient.ingredient_id))
+            .is_some();
+        if contains_invalid_ingredient_id {
+            return Err(AppError::RecipeParsingError(
+                RecipeParsingError::InvalidIngredientId,
+            ));
+        }
+        let contains_invalid_unit_id = recipe
+            .ingredients
+            .iter()
+            .find(|recipe_ingredient| !unit_ids.contains(&recipe_ingredient.unit_id))
+            .is_some();
+        if contains_invalid_unit_id {
+            return Err(AppError::RecipeParsingError(
+                RecipeParsingError::InvalidUnitId,
+            ));
+        }
+        Ok(recipe)
+    }
 }
 
 impl TryFrom<UncheckedRecipe> for Recipe {

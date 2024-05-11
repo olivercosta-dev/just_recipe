@@ -12,7 +12,7 @@ use utils::*;
 
 #[sqlx::test]
 async fn adding_new_ingredient_persists_returns_204_no_content(pool: PgPool) -> sqlx::Result<()> {
-    let app_state = AppState { pool };
+    let app_state = AppState::new(pool).await;
     let app = new_app(app_state.clone()).await;
     let singular_name = Faker.fake::<String>();
     let plural_name = Faker.fake::<String>();
@@ -40,7 +40,7 @@ async fn adding_new_ingredient_persists_returns_204_no_content(pool: PgPool) -> 
 }
 #[sqlx::test(fixtures("ingredients"))]
 async fn adding_existing_ingredient_returns_409_conflict(pool: PgPool) -> sqlx::Result<()> {
-    let app_state = AppState { pool };
+    let app_state = AppState::new(pool).await;
     let app = new_app(app_state.clone()).await;
     let singular_name = "carrot";
     let plural_name = "carrots";
@@ -56,7 +56,7 @@ async fn adding_existing_ingredient_returns_409_conflict(pool: PgPool) -> sqlx::
 async fn deleting_existing_ingredient_gets_removed_returns_204_no_content(
     pool: PgPool,
 ) -> sqlx::Result<()> {
-    let app_state = AppState { pool };
+    let app_state = AppState::new(pool).await;
     let app = new_app(app_state.clone()).await;
     let ingredient_id = choose_random_ingredient(&app_state.pool)
         .await
@@ -79,7 +79,7 @@ async fn deleting_existing_ingredient_gets_removed_returns_204_no_content(
 async fn updating_existing_ingredient_gets_updated_returns_204_no_content(
     pool: PgPool,
 ) -> sqlx::Result<()> {
-    let app_state = AppState { pool };
+    let app_state = AppState::new(pool).await;
     let app = new_app(app_state.clone()).await;
     let ingredient_id = choose_random_ingredient(&app_state.pool)
         .await
@@ -114,7 +114,7 @@ async fn updating_existing_ingredient_gets_updated_returns_204_no_content(
 async fn updating_non_existing_ingredient_returns_404_not_found(
     pool: PgPool,
 ) -> sqlx::Result<()> {
-    let app_state = AppState { pool };
+    let app_state = AppState::new(pool).await;
     let app = new_app(app_state.clone()).await;
     let ingredient_id = -1; // This ingredient_id will never exist, as they are always positive
     let singular_name = Faker.fake::<String>();

@@ -11,7 +11,7 @@ use just_recipe::unit::Unit;
 
 #[sqlx::test]
 async fn adding_new_unit_persists_and_returns_204_no_content(pool: PgPool) -> sqlx::Result<()> {
-    let app_state = AppState { pool };
+    let app_state = AppState::new(pool).await;
     let app = new_app(app_state.clone()).await;
     let singular_name = Faker.fake::<String>();
     let plural_name = Faker.fake::<String>();
@@ -40,7 +40,7 @@ async fn adding_new_unit_persists_and_returns_204_no_content(pool: PgPool) -> sq
 
 #[sqlx::test(fixtures("units"))]
 async fn adding_existing_unit_returns_409_conflict(pool: PgPool) -> sqlx::Result<()> {
-    let app_state = AppState { pool };
+    let app_state = AppState::new(pool).await;
     let app = new_app(app_state.clone()).await;
     let singular_name = "kilogram";
     let plural_name = "kilograms";
@@ -57,7 +57,7 @@ async fn adding_existing_unit_returns_409_conflict(pool: PgPool) -> sqlx::Result
 async fn deleting_existing_unit_gets_removed_returns_204_no_content(
     pool: PgPool,
 ) -> sqlx::Result<()> {
-    let app_state = AppState { pool };
+    let app_state = AppState::new(pool).await;
     let app = new_app(app_state.clone()).await;
     let unit_id = choose_random_unit(&app_state.pool).await.unit_id;
     let request = create_delete_request_to("units", json!({"unit_id": unit_id}));
@@ -75,7 +75,7 @@ async fn deleting_existing_unit_gets_removed_returns_204_no_content(
 async fn updating_existing_unit_gets_updated_returns_204_no_content(
     pool: PgPool,
 ) -> sqlx::Result<()> {
-    let app_state = AppState { pool };
+    let app_state = AppState::new(pool).await;
     let app = new_app(app_state.clone()).await;
     let unit_id = choose_random_unit(&app_state.pool).await.unit_id;
     let singular_name = Faker.fake::<String>();
@@ -106,7 +106,7 @@ async fn updating_existing_unit_gets_updated_returns_204_no_content(
 
 #[sqlx::test(fixtures("units"))]
 async fn updating_non_existing_unit_returns_404_not_found(pool: PgPool) -> sqlx::Result<()> {
-    let app_state = AppState { pool };
+    let app_state = AppState::new(pool).await;
     let app = new_app(app_state.clone()).await;
     let unit_id = -1; // This is an invalid id by definition.
     let singular_name = Faker.fake::<String>();

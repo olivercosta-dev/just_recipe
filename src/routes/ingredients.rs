@@ -19,12 +19,19 @@ pub async fn add_ingredient(
     State(app_state): State<AppState>,
     Json(ingredient): Json<Ingredient>,
 ) -> Result<StatusCode, AppError> {
-    insert_ingredient(ingredient, &app_state.pool).await?;
-
+    insert_ingredient_into_db(&ingredient, &app_state.pool).await?;
+    cache_ingredient_id(ingredient.ingredient_id, app_state);
     Ok(StatusCode::NO_CONTENT)
 }
+fn cache_ingredient_id(ingredient_id: i32, app_state: AppState) {
+    app_state.ingredient_ids.insert(ingredient_id);
+}
 
-async fn insert_ingredient(ingredient: Ingredient, pool: &PgPool) -> Result<(), AppError> {
+fn remove_ingredient_id_from_cache(ingredient_id: &i32, app_state: AppState) {
+    app_state.ingredient_ids.remove(ingredient_id);
+}
+
+async fn insert_ingredient_into_db(ingredient: &Ingredient, pool: &PgPool) -> Result<(), AppError> {
     match query!(
         r#"
             INSERT INTO ingredient (singular_name, plural_name) 
@@ -41,22 +48,27 @@ async fn insert_ingredient(ingredient: Ingredient, pool: &PgPool) -> Result<(), 
         Ok(_) => Ok(()),
     }
 }
+
 // TODO (oliver): Remove non existent ingredient
 pub async fn remove_ingredient(
     State(app_state): State<AppState>,
     Json(delete_ingredient_request): Json<RemoveIngredientRequest>,
-) -> StatusCode {
-    match sqlx::query!(
-        "DELETE FROM ingredient WHERE ingredient_id = $1",
-        delete_ingredient_request.ingredient_id
-    )
-    .execute(&app_state.pool)
-    .await
-    {
-        Ok(_) => StatusCode::NO_CONTENT,
-        Err(_) => StatusCode::INTERNAL_SERVER_ERROR,
-    }
+) -> Result<StatusCode, AppError> {
+    delete_ingredient_from_db(&delete_ingredient_request.ingredient_id, &app_state.pool).await?;
+    remove_ingredient_id_from_cache(&delete_ingredient_request.ingredient_id, app_state);
+    Ok(StatusCode::NO_CONTENT)
 }
+
+async fn delete_ingredient_from_db(ingredient_id: &i32, pool: &PgPool) -> Result<(), AppError> {
+    sqlx::query!(
+        "DELETE FROM ingredient WHERE ingredient_id = $1",
+        ingredient_id
+    )
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
 pub async fn update_ingredient(
     State(app_state): State<AppState>,
     Path(ingredient_id): Path<i32>,

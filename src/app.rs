@@ -1,13 +1,19 @@
-use crate::{recipe::RecipeParsingError, routes::*};
+use crate::{fetch_all_ingredient_ids, fetch_all_unit_ids, recipe::RecipeParsingError, routes::*};
 use axum::{
-    http::StatusCode, response::{IntoResponse, Response}, routing::{get, post, put}, Router
+    http::StatusCode,
+    response::{IntoResponse, Response},
+    routing::{get, post, put},
+    Router,
 };
-use sqlx::{Error as SqlxError, PgPool};
+use dashmap::DashSet;
+use sqlx::{pool, Error as SqlxError, PgPool};
 use tower_http::catch_panic::CatchPanicLayer;
 
 #[derive(Clone)]
 pub struct AppState {
     pub pool: PgPool,
+    pub unit_ids: DashSet<i32>,
+    pub ingredient_ids: DashSet<i32>,
 }
 #[derive(Debug)]
 pub enum AppError {
@@ -16,6 +22,24 @@ pub enum AppError {
     Conflict,
     RecipeParsingError(RecipeParsingError),
 }
+
+impl AppState {
+    /// ## This function might panic.
+    pub async fn new(pool: PgPool) -> AppState {
+        let unit_ids = fetch_all_unit_ids(&pool)
+            .await
+            .expect("should have fetched the unit_id set");
+        let ingredient_ids = fetch_all_ingredient_ids(&pool)
+            .await
+            .expect("should have fetched the ingredient_id set");
+        AppState {
+            pool,
+            unit_ids,
+            ingredient_ids,
+        }
+    }
+}
+
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         match self {

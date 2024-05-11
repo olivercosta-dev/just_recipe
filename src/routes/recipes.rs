@@ -52,6 +52,7 @@ pub async fn add_recipe(
     transaction.commit().await?;
     Ok(StatusCode::NO_CONTENT)
 }
+
 async fn insert_recipe(
     recipe: &Recipe,
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
@@ -67,6 +68,7 @@ async fn insert_recipe(
     .await?;
     Ok(recipe_query_result.recipe_id)
 }
+
 // TODO (oliver): Perhaps unit test the utility functions?
 async fn bulk_insert_ingredients(
     ingredients: Vec<RecipeIngredient>,
@@ -128,7 +130,7 @@ async fn bulk_insert_steps(
     Ok(query_result)
 }
 
-// TODO (oliver): remove a non existent recipe
+// TODO (oliver): Remove a non existent recipe
 // Deleting a recipe_id will cascade on a database level.
 pub async fn remove_recipe(
     State(app_state): State<AppState>,
@@ -148,7 +150,11 @@ pub async fn update_recipe(
     Path(recipe_id): Path<i32>,
     Json(unchecked_recipe): Json<UncheckedRecipe>,
 ) -> Result<StatusCode, AppError> {
-    let recipe: Recipe = unchecked_recipe.try_into()?;
+    let recipe: Recipe = Recipe::parse(
+        unchecked_recipe,
+        &app_state.unit_ids,
+        &app_state.ingredient_ids,
+    )?;
     let mut transaction = app_state.pool.begin().await?;
     update_recipe_record(&recipe, recipe_id, &mut transaction).await?;
 

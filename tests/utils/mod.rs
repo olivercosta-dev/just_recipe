@@ -48,7 +48,6 @@ pub fn create_recipe_steps_json_for_request(steps: Vec<RecipeStep>) -> Vec<Value
         .collect()
 }
 
-
 pub fn generate_random_number_of_steps() -> Vec<RecipeStep> {
     let number_of_steps = (2..10).fake::<i32>();
     (1..number_of_steps)

@@ -19,11 +19,12 @@ pub async fn add_unit(
     State(app_state): State<AppState>,
     Json(unit): Json<Unit>,
 ) -> Result<StatusCode, AppError> {
-    insert_unit(unit, &app_state.pool).await?;
+    insert_unit_into_db(&unit, &app_state.pool).await?;
+    cache_unit_id(unit.unit_id, app_state);
     Ok(StatusCode::NO_CONTENT)
 }
 
-async fn insert_unit(unit: Unit, pool: &PgPool) -> Result<(), AppError> {
+async fn insert_unit_into_db(unit: &Unit, pool: &PgPool) -> Result<(), AppError> {
     match query!(
         r#"
             INSERT INTO unit (singular_name, plural_name) 
@@ -40,18 +41,30 @@ async fn insert_unit(unit: Unit, pool: &PgPool) -> Result<(), AppError> {
         Ok(_) => Ok(()),
     }
 }
+
+fn cache_unit_id(unit_id: i32, app_state: AppState) {
+    app_state.unit_ids.insert(unit_id);
+}
+fn remove_unit_id_from_cache(unit_id: &i32, app_state: AppState) {
+    app_state.unit_ids.remove(unit_id);
+}
 // TODO (oliver): Removing non_existent_unit_id
 pub async fn remove_unit(
     State(app_state): State<AppState>,
     Json(delete_unit_request): Json<RemoveUnitRequest>,
 ) -> Result<StatusCode, AppError> {
+    delete_unit_from_db(&delete_unit_request.unit_id, &app_state.pool).await?;
+    remove_unit_id_from_cache(&delete_unit_request.unit_id, app_state);
+    Ok(StatusCode::NO_CONTENT)
+}
+async fn delete_unit_from_db(unit_id: &i32, pool: &PgPool) -> Result<(), AppError> {
     sqlx::query!(
         "DELETE FROM unit WHERE unit_id = $1",
-        delete_unit_request.unit_id
+        unit_id
     )
-    .execute(&app_state.pool)
+    .execute(pool)
     .await?;
-    Ok(StatusCode::NO_CONTENT)
+    Ok(())
 }
 
 pub async fn update_unit(
