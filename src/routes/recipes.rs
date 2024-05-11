@@ -12,8 +12,6 @@ pub struct RemoveRecipeRequest {
     pub recipe_id: i32,
 }
 
-
-
 /* Example request:
 {
     "name": "Very Tasty Soup",
