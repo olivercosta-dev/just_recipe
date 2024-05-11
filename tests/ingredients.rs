@@ -2,7 +2,7 @@ use axum::http::StatusCode;
 use fake::{Fake, Faker};
 use just_recipe::{
     app::{new_app, AppState},
-    routes::Ingredient,
+    ingredient::Ingredient,
 };
 use serde_json::json;
 use sqlx::PgPool;
