@@ -2,8 +2,8 @@ pub mod app;
 pub mod routes;
 
 pub mod recipe {
-    use serde::{Deserialize, Serialize};
     use crate::app::AppError;
+    use serde::{Deserialize, Serialize};
 
     #[derive(Deserialize)]
     #[serde(rename(deserialize = "recipe"))]
@@ -33,7 +33,7 @@ pub mod recipe {
         pub unit_id: i32,
         pub quantity: String,
     }
-    
+
     #[derive(Serialize, Deserialize, Clone)]
     pub struct RecipeStep {
         #[serde(skip)]
@@ -100,5 +100,16 @@ pub mod recipe {
             AppError::RecipeParsingError(err)
         }
     }
- 
+}
+
+pub mod unit {
+    use serde::{Deserialize, Serialize};
+
+    #[derive(Deserialize, Serialize, Debug)]
+    pub struct Unit {
+        #[serde(skip)]
+        pub unit_id: i32,
+        pub singular_name: String,
+        pub plural_name: String,
+    }
 }

@@ -13,6 +13,7 @@ pub struct AppState {
 pub enum AppError {
     InternalServerError,
     NotFound,
+    Conflict,
     RecipeParsingError(RecipeParsingError),
 }
 impl IntoResponse for AppError {
@@ -20,6 +21,7 @@ impl IntoResponse for AppError {
         match self {
             AppError::InternalServerError => StatusCode::INTERNAL_SERVER_ERROR,
             AppError::NotFound => StatusCode::NOT_FOUND,
+            AppError::Conflict => StatusCode::CONFLICT,
             AppError::RecipeParsingError(_) => StatusCode::UNPROCESSABLE_ENTITY,
         }
         .into_response()

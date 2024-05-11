@@ -68,7 +68,6 @@ async fn insert_recipe(
     Ok(recipe_query_result.recipe_id)
 }
 // TODO (oliver): Perhaps unit test the utility functions?
-
 async fn bulk_insert_ingredients(
     ingredients: Vec<RecipeIngredient>,
     recipe_id: i32,
@@ -129,7 +128,7 @@ async fn bulk_insert_steps(
     Ok(query_result)
 }
 
-// TODO remove a non existent recipe
+// TODO (oliver): remove a non existent recipe
 // Deleting a recipe_id will cascade on a database level.
 pub async fn remove_recipe(
     State(app_state): State<AppState>,

@@ -4,7 +4,7 @@ use std::collections::HashSet;
 
 use axum::{body::Body, http::Request};
 use fake::{Fake, Faker};
-use just_recipe::{recipe::{RecipeIngredient, RecipeStep}, routes::{Ingredient, Unit}};
+use just_recipe::{recipe::{RecipeIngredient, RecipeStep}, routes::Ingredient, unit::Unit};
 use serde_json::{json, Value};
 use sqlx::PgPool;
 
