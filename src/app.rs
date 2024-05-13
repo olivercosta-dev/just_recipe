@@ -67,7 +67,10 @@ pub async fn new_app(app_state: AppState) -> Router {
             "/ingredients",
             post(add_ingredient).delete(remove_ingredient),
         )
-        .route("/ingredients/:ingredient_id", put(update_ingredient))
+        .route(
+            "/ingredients/:ingredient_id",
+            put(update_ingredient).get(get_ingredient),
+        )
         .route("/recipes", post(add_recipe).delete(remove_recipe))
         .route("/recipes/:recipe_id", put(update_recipe))
         .layer(CatchPanicLayer::new())

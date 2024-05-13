@@ -1,6 +1,7 @@
 use axum::{
     extract::{Path, State},
     http::StatusCode,
+    response::IntoResponse,
     Json,
 };
 use serde::{Deserialize, Serialize};
@@ -19,10 +20,11 @@ pub async fn add_ingredient(
     State(app_state): State<AppState>,
     Json(ingredient): Json<Ingredient>,
 ) -> Result<StatusCode, AppError> {
-    insert_ingredient_into_db(&ingredient, &app_state.pool).await?;
-    cache_ingredient_id(ingredient.ingredient_id, app_state);
+    let ingredient_id = insert_ingredient_into_db(&ingredient, &app_state.pool).await?;
+    cache_ingredient_id(ingredient_id, app_state);
     Ok(StatusCode::NO_CONTENT)
 }
+
 fn cache_ingredient_id(ingredient_id: i32, app_state: AppState) {
     app_state.ingredient_ids.insert(ingredient_id);
 }
@@ -31,21 +33,25 @@ fn remove_ingredient_id_from_cache(ingredient_id: &i32, app_state: AppState) {
     app_state.ingredient_ids.remove(ingredient_id);
 }
 
-async fn insert_ingredient_into_db(ingredient: &Ingredient, pool: &PgPool) -> Result<(), AppError> {
+async fn insert_ingredient_into_db(
+    ingredient: &Ingredient,
+    pool: &PgPool,
+) -> Result<i32, AppError> {
     match query!(
         r#"
             INSERT INTO ingredient (singular_name, plural_name) 
-            VALUES ($1, $2);
+            VALUES ($1, $2)
+            RETURNING ingredient_id;
         "#,
         ingredient.singular_name,
         ingredient.plural_name
     )
-    .execute(pool)
+    .fetch_one(pool)
     .await
     {
         Err(sqlx::Error::Database(err)) if err.is_unique_violation() => Err(AppError::Conflict),
         Err(_) => Err(AppError::InternalServerError),
-        Ok(_) => Ok(()),
+        Ok(rec) => Ok(rec.ingredient_id),
     }
 }
 
@@ -79,7 +85,6 @@ pub async fn update_ingredient(
     insert_ingredient_record(ingredient, ingredient_id, &app_state.pool).await?;
     Ok(StatusCode::NO_CONTENT)
 }
-
 async fn insert_ingredient_record(
     ingredient: Ingredient,
     ingredient_id: i32,
@@ -98,4 +103,30 @@ async fn insert_ingredient_record(
         Err(_) => Err(AppError::InternalServerError),
         _ => Ok(()),
     }
+}
+
+pub async fn get_ingredient(
+    State(app_state): State<AppState>,
+    Path(ingredient_id): Path<i32>,
+) -> Result<impl IntoResponse, AppError> {
+    let ingredient = fetch_ingredient_from_db(&app_state.pool, ingredient_id).await?;
+    Ok(Json(ingredient))
+}
+async fn fetch_ingredient_from_db(
+    pool: &PgPool,
+    ingredient_id: i32,
+) -> Result<Ingredient, AppError> {
+    let ingredient = sqlx::query_as!(
+        Ingredient,
+        r#"
+            SELECT * 
+            FROM ingredient
+            WHERE ingredient_id = $1
+        "#,
+        ingredient_id
+    )
+    .fetch_optional(pool)
+    .await?
+    .ok_or(AppError::NotFound)?;
+    Ok(ingredient)
 }

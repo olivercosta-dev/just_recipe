@@ -347,7 +347,7 @@ async fn updating_recipe_with_non_existent_ingredient_id_returns_422_unproccessa
     let recipe_description = Faker.fake::<String>();
     let (_, units) = fetch_ingredients_and_units(&app_state.pool).await;
     let ingredients = vec![Ingredient {
-        ingredient_id: 100_000,
+        ingredient_id: Some(100_000),
         singular_name: Faker.fake::<String>(),
         plural_name: Faker.fake::<String>(),
     }];

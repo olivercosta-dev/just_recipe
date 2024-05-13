@@ -43,6 +43,18 @@ pub fn create_put_request_to(
         .unwrap()
 }
 
+pub fn create_get_request_to(
+    endpoint: &str,
+    resource_id: i32,
+    json: serde_json::Value,
+) -> Request<Body> {
+    Request::builder()
+        .method("GET")
+        .uri(format!("/{}/{}", endpoint, resource_id))
+        .body(Body::from(serde_json::to_vec(&json).unwrap()))
+        .unwrap()
+}
+
 pub fn create_recipe_steps_json_for_request(steps: Vec<RecipeStep>) -> Vec<Value> {
     steps
         .iter()
@@ -184,7 +196,9 @@ pub fn generate_random_recipe_ingredients(
 
     while TryInto::<i32>::try_into(recipe_ingredients.len()).unwrap() != number_of_pairs {
         let random_index = (0..ingredients.len().try_into().unwrap()).fake::<usize>();
-        let ingr_id = ingredients[random_index].ingredient_id;
+        let ingr_id = ingredients[random_index]
+            .ingredient_id
+            .expect("ingredient should have been able to be unwrapped");
         if ingredient_ids.insert(ingr_id) {
             let random_unit_index = (0..units.len().try_into().unwrap()).fake::<usize>();
             let recipe_ingredient = RecipeIngredient {
@@ -276,11 +290,11 @@ mod tests {
             plural_name: Faker.fake::<String>(),
         }];
         let ingredients = vec![Ingredient {
-            ingredient_id: 1,
+            ingredient_id: Some(1),
             singular_name: Faker.fake::<String>(),
             plural_name: Faker.fake::<String>(),
         }];
         let recipe_ingredients = generate_random_recipe_ingredients(units, ingredients);
-        assert!(recipe_ingredients.len() > 0);    
+        assert!(recipe_ingredients.len() > 0);
     }
 }

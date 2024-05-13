@@ -1,4 +1,4 @@
-use axum::http::StatusCode;
+use axum::{body::to_bytes, http::StatusCode};
 use fake::{Fake, Faker};
 use just_recipe::{
     app::{new_app, AppState},
@@ -53,9 +53,7 @@ async fn adding_existing_ingredient_returns_409_conflict(pool: PgPool) -> sqlx::
 }
 
 #[sqlx::test(fixtures("ingredients"))]
-async fn deleting_non_existent_ingredient_returns_404_not_found(
-    pool: PgPool,
-) -> sqlx::Result<()> {
+async fn deleting_non_existent_ingredient_returns_404_not_found(pool: PgPool) -> sqlx::Result<()> {
     let app_state = AppState::new(pool).await;
     let app = new_app(app_state.clone()).await;
     let ingredient_id = -1;
@@ -88,16 +86,18 @@ async fn deleting_existing_ingredient_gets_removed_returns_204_no_content(
     Ok(())
 }
 
-
 #[sqlx::test(fixtures("ingredients"))]
 async fn updating_existing_ingredient_gets_updated_returns_204_no_content(
     pool: PgPool,
 ) -> sqlx::Result<()> {
     let app_state = AppState::new(pool).await;
     let app = new_app(app_state.clone()).await;
+    
     let ingredient_id = choose_random_ingredient(&app_state.pool)
         .await
-        .ingredient_id;
+        .ingredient_id
+        .expect("should have been able to unwrap ingredent_id");
+
     let singular_name = Faker.fake::<String>();
     let plural_name = Faker.fake::<String>();
     let json = json!({"singular_name": singular_name, "plural_name": plural_name});
@@ -125,9 +125,7 @@ async fn updating_existing_ingredient_gets_updated_returns_204_no_content(
 }
 
 #[sqlx::test(fixtures("ingredients"))]
-async fn updating_non_existent_ingredient_returns_404_not_found(
-    pool: PgPool,
-) -> sqlx::Result<()> {
+async fn updating_non_existent_ingredient_returns_404_not_found(pool: PgPool) -> sqlx::Result<()> {
     let app_state = AppState::new(pool).await;
     let app = new_app(app_state.clone()).await;
     let ingredient_id = -1; // This ingredient_id will never exist, as they are always positive
@@ -137,5 +135,33 @@ async fn updating_non_existent_ingredient_returns_404_not_found(
     let request = create_put_request_to("ingredients", ingredient_id, json);
     let response = app.oneshot(request).await.unwrap();
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    Ok(())
+}
+
+#[sqlx::test(fixtures("ingredients"))]
+async fn getting_existing_ingredient_returns_ingredient_and_200_ok(
+    pool: PgPool,
+) -> sqlx::Result<()> {
+    let app_state = AppState::new(pool).await;
+    let app = new_app(app_state.clone()).await;
+    let ingredient = choose_random_ingredient(&app_state.pool).await;
+    let json = json!({
+        "ingredient_id": ingredient.ingredient_id
+    });
+    let request = create_get_request_to("ingredients", ingredient.ingredient_id.unwrap(), json);
+    let response = app.oneshot(request).await.unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let bytes = to_bytes(response.into_body(), usize::MAX)
+        .await
+        .expect("Failed to read body bytes");
+
+    let response_ingredient: Ingredient =
+        serde_json::from_slice(&bytes).expect("Failed to deserialize JSON");
+
+    assert_eq!(response_ingredient.ingredient_id, ingredient.ingredient_id);
+    assert_eq!(response_ingredient.singular_name, ingredient.singular_name);
+    assert_eq!(response_ingredient.plural_name, ingredient.plural_name);
     Ok(())
 }
