@@ -49,7 +49,6 @@ async fn insert_ingredient_into_db(ingredient: &Ingredient, pool: &PgPool) -> Re
     }
 }
 
-// TODO (oliver): Remove non existent ingredient
 pub async fn remove_ingredient(
     State(app_state): State<AppState>,
     Json(delete_ingredient_request): Json<RemoveIngredientRequest>,
@@ -60,12 +59,15 @@ pub async fn remove_ingredient(
 }
 
 async fn delete_ingredient_from_db(ingredient_id: &i32, pool: &PgPool) -> Result<(), AppError> {
-    sqlx::query!(
+    let result = sqlx::query!(
         "DELETE FROM ingredient WHERE ingredient_id = $1",
         ingredient_id
     )
     .execute(pool)
     .await?;
+    if result.rows_affected() == 0 {
+        return Err(AppError::NotFound);
+    }
     Ok(())
 }
 

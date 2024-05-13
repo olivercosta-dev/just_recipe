@@ -53,6 +53,18 @@ async fn adding_existing_ingredient_returns_409_conflict(pool: PgPool) -> sqlx::
 }
 
 #[sqlx::test(fixtures("ingredients"))]
+async fn deleting_non_existent_ingredient_returns_404_not_found(
+    pool: PgPool,
+) -> sqlx::Result<()> {
+    let app_state = AppState::new(pool).await;
+    let app = new_app(app_state.clone()).await;
+    let ingredient_id = -1;
+    let request = create_delete_request_to("ingredients", json!({"ingredient_id": ingredient_id}));
+    let response = app.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    Ok(())
+}
+#[sqlx::test(fixtures("ingredients"))]
 async fn deleting_existing_ingredient_gets_removed_returns_204_no_content(
     pool: PgPool,
 ) -> sqlx::Result<()> {
@@ -75,6 +87,8 @@ async fn deleting_existing_ingredient_gets_removed_returns_204_no_content(
     assert!(ingredient_record.is_none());
     Ok(())
 }
+
+
 #[sqlx::test(fixtures("ingredients"))]
 async fn updating_existing_ingredient_gets_updated_returns_204_no_content(
     pool: PgPool,
@@ -111,7 +125,7 @@ async fn updating_existing_ingredient_gets_updated_returns_204_no_content(
 }
 
 #[sqlx::test(fixtures("ingredients"))]
-async fn updating_non_existing_ingredient_returns_404_not_found(
+async fn updating_non_existent_ingredient_returns_404_not_found(
     pool: PgPool,
 ) -> sqlx::Result<()> {
     let app_state = AppState::new(pool).await;

@@ -12,7 +12,7 @@ use crate::{
 };
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct RemoveUnitRequest {
+pub struct DeleteUnitRequest {
     pub unit_id: i32,
 }
 pub async fn add_unit(
@@ -48,22 +48,26 @@ fn cache_unit_id(unit_id: i32, app_state: AppState) {
 fn remove_unit_id_from_cache(unit_id: &i32, app_state: AppState) {
     app_state.unit_ids.remove(unit_id);
 }
+
 // TODO (oliver): Removing non_existent_unit_id
 pub async fn remove_unit(
     State(app_state): State<AppState>,
-    Json(delete_unit_request): Json<RemoveUnitRequest>,
+    Json(delete_unit_request): Json<DeleteUnitRequest>,
 ) -> Result<StatusCode, AppError> {
     delete_unit_from_db(&delete_unit_request.unit_id, &app_state.pool).await?;
     remove_unit_id_from_cache(&delete_unit_request.unit_id, app_state);
     Ok(StatusCode::NO_CONTENT)
 }
 async fn delete_unit_from_db(unit_id: &i32, pool: &PgPool) -> Result<(), AppError> {
-    sqlx::query!(
+    let result = sqlx::query!(
         "DELETE FROM unit WHERE unit_id = $1",
         unit_id
     )
     .execute(pool)
     .await?;
+    if result.rows_affected() == 0 {
+        return Err(AppError::NotFound);
+    }
     Ok(())
 }
 

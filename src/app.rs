@@ -6,7 +6,7 @@ use axum::{
     Router,
 };
 use dashmap::DashSet;
-use sqlx::{pool, Error as SqlxError, PgPool};
+use sqlx::{Error as SqlxError, PgPool};
 use tower_http::catch_panic::CatchPanicLayer;
 
 #[derive(Clone)]
@@ -15,7 +15,7 @@ pub struct AppState {
     pub unit_ids: DashSet<i32>,
     pub ingredient_ids: DashSet<i32>,
 }
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum AppError {
     InternalServerError,
     NotFound,

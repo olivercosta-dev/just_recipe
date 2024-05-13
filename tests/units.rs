@@ -71,6 +71,21 @@ async fn deleting_existing_unit_gets_removed_returns_204_no_content(
     assert!(unit_record.is_none());
     Ok(())
 }
+
+#[sqlx::test(fixtures("units"))]
+async fn deleting_non_existent_unit_returns_404_not_found(
+    pool: PgPool,
+) -> sqlx::Result<()> {
+    let app_state = AppState::new(pool).await;
+    let app = new_app(app_state.clone()).await;
+    let unit_id = -1;
+    let request = create_delete_request_to("units", json!({"unit_id": unit_id}));
+    let response = app.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    Ok(())
+}
+
+
 #[sqlx::test(fixtures("units"))]
 async fn updating_existing_unit_gets_updated_returns_204_no_content(
     pool: PgPool,
@@ -105,7 +120,7 @@ async fn updating_existing_unit_gets_updated_returns_204_no_content(
 }
 
 #[sqlx::test(fixtures("units"))]
-async fn updating_non_existing_unit_returns_404_not_found(pool: PgPool) -> sqlx::Result<()> {
+async fn updating_non_existent_unit_returns_404_not_found(pool: PgPool) -> sqlx::Result<()> {
     let app_state = AppState::new(pool).await;
     let app = new_app(app_state.clone()).await;
     let unit_id = -1; // This is an invalid id by definition.

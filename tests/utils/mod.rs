@@ -4,7 +4,11 @@ use std::collections::HashSet;
 
 use axum::{body::Body, http::Request};
 use fake::{Fake, Faker};
-use just_recipe::{recipe::{RecipeIngredient, RecipeStep}, ingredient::Ingredient, unit::Unit};
+use just_recipe::{
+    ingredient::Ingredient,
+    recipe::{RecipeIngredient, RecipeStep},
+    unit::{self, Unit},
+};
 use serde_json::{json, Value};
 use sqlx::PgPool;
 
@@ -26,15 +30,18 @@ pub fn create_delete_request_to(endpoint: &str, json: serde_json::Value) -> Requ
         .unwrap()
 }
 
-pub fn create_put_request_to(endpoint: &str, resource_id: i32, json: serde_json::Value) -> Request<Body> {
+pub fn create_put_request_to(
+    endpoint: &str,
+    resource_id: i32,
+    json: serde_json::Value,
+) -> Request<Body> {
     Request::builder()
-    .method("PUT")
-    .uri(format!("/{}/{}", endpoint, resource_id))
-    .header("Content-type", "application/json")
-    .body(Body::from(serde_json::to_vec(&json).unwrap()))
-    .unwrap()
+        .method("PUT")
+        .uri(format!("/{}/{}", endpoint, resource_id))
+        .header("Content-type", "application/json")
+        .body(Body::from(serde_json::to_vec(&json).unwrap()))
+        .unwrap()
 }
-
 
 pub fn create_recipe_steps_json_for_request(steps: Vec<RecipeStep>) -> Vec<Value> {
     steps
@@ -166,11 +173,12 @@ pub async fn assert_recipe_steps_exist(pool: &PgPool, recipe_steps: Vec<Value>, 
     }
 }
 
+// TODO (oliver): This code isn't fully safe yet. It can panic with some length discrepancies
 pub fn generate_random_recipe_ingredients(
     units: Vec<Unit>,
     ingredients: Vec<Ingredient>,
 ) -> Vec<RecipeIngredient> {
-    let number_of_pairs: i32 = (0..ingredients.len().try_into().unwrap()).fake::<i32>();
+    let number_of_pairs: i32 = (1..=ingredients.len().try_into().unwrap()).fake::<i32>();
     let mut ingredient_ids: HashSet<i32> = HashSet::new(); // Ingredients must be unique!
     let mut recipe_ingredients: Vec<RecipeIngredient> = Vec::new();
 
@@ -251,4 +259,28 @@ pub async fn choose_random_recipe_id(pool: &PgPool) -> i32 {
         .expect("No recipes were found.");
     let random_index: usize = (0..recipes.len()).fake::<usize>();
     recipes[random_index].recipe_id
+}
+
+#[cfg(test)]
+mod tests {
+    use fake::{Fake, Faker};
+    use just_recipe::{ingredient::Ingredient, unit::Unit};
+
+    use super::generate_random_recipe_ingredients;
+
+    #[test]
+    fn generates_random_recipe_ingredients() {
+        let units = vec![Unit {
+            unit_id: 1,
+            singular_name: Faker.fake::<String>(),
+            plural_name: Faker.fake::<String>(),
+        }];
+        let ingredients = vec![Ingredient {
+            ingredient_id: 1,
+            singular_name: Faker.fake::<String>(),
+            plural_name: Faker.fake::<String>(),
+        }];
+        let recipe_ingredients = generate_random_recipe_ingredients(units, ingredients);
+        assert!(recipe_ingredients.len() > 0);    
+    }
 }
