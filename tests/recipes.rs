@@ -238,6 +238,20 @@ async fn deleting_existing_recipe_gets_removed_returns_204_content(
 }
 
 #[sqlx::test(fixtures("units", "ingredients", "recipes", "recipe_ingredients"))]
+async fn deleting_non_existent_recipe_returns_404_not_found(
+    pool: PgPool,
+) -> sqlx::Result<()> {
+    let app_state = AppState::new(pool).await;
+    let app = new_app(app_state.clone()).await;
+    let recipe_id = -1;
+    let request = create_delete_request_to("recipes", json!({"recipe_id": recipe_id}));
+    let response = app.oneshot(request).await.unwrap();
+
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    Ok(())
+}
+
+#[sqlx::test(fixtures("units", "ingredients", "recipes", "recipe_ingredients"))]
 async fn updating_existing_recipe_gets_updated_returns_204_no_content(
     pool: PgPool,
 ) -> sqlx::Result<()> {

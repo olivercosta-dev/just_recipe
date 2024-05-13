@@ -7,7 +7,7 @@ use fake::{Fake, Faker};
 use just_recipe::{
     ingredient::Ingredient,
     recipe::{RecipeIngredient, RecipeStep},
-    unit::{self, Unit},
+    unit::Unit,
 };
 use serde_json::{json, Value};
 use sqlx::PgPool;

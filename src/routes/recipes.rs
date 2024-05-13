@@ -136,12 +136,15 @@ pub async fn remove_recipe(
     State(app_state): State<AppState>,
     Json(remove_recipe_request): Json<RemoveRecipeRequest>,
 ) -> Result<StatusCode, AppError> {
-    sqlx::query!(
+    let result = sqlx::query!(
         "DELETE FROM recipe WHERE recipe_id = $1",
         remove_recipe_request.recipe_id
     )
     .execute(&app_state.pool)
     .await?;
+    if result.rows_affected() == 0 {
+        return Err(AppError::NotFound);
+    }
     Ok(StatusCode::NO_CONTENT)
 }
 

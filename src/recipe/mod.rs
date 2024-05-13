@@ -1,5 +1,5 @@
 use crate::app::AppError;
-use dashmap::{DashMap, DashSet};
+use dashmap::DashSet;
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Debug)]
@@ -59,7 +59,7 @@ impl Recipe {
     ) -> Result<Self, AppError> {
         impl TryFrom<UncheckedRecipe> for Recipe {
             type Error = AppError;
-        
+
             fn try_from(unchecked_recipe: UncheckedRecipe) -> Result<Self, AppError> {
                 // Recipe_id should always be non-negative
                 if unchecked_recipe.recipe_id < 0 {
@@ -69,7 +69,7 @@ impl Recipe {
                 }
                 let mut ordered_recipe_steps = unchecked_recipe.steps.clone();
                 ordered_recipe_steps.sort_by(|a, b| a.step_number.cmp(&b.step_number));
-        
+
                 // Only recipes with complete steps (no holes, and in-order) are allowed.
                 if ordered_recipe_steps[0].step_number != 1 {
                     return Err(AppError::RecipeParsingError(
@@ -97,7 +97,7 @@ impl Recipe {
                 })
             }
         }
-        
+
         let recipe: Recipe = unchecked_recipe.try_into()?;
         let contains_invalid_ingredient_id = recipe
             .ingredients
@@ -131,7 +131,10 @@ impl From<RecipeParsingError> for AppError {
 
 #[cfg(test)]
 mod tests {
-    use crate::{app::AppError, recipe::{Recipe, RecipeIngredient, RecipeParsingError, RecipeStep, UncheckedRecipe}, routes::remove_recipe};
+    use crate::{
+        app::AppError,
+        recipe::{Recipe, RecipeIngredient, RecipeParsingError, RecipeStep, UncheckedRecipe},
+    };
     // TODO (oliver): There is some refactoring here to be done. Make it cleaner, more general.
     #[test]
     fn parsing_unchecked_recipe_with_non_existent_unit_id_returns_error() {
@@ -141,37 +144,37 @@ mod tests {
 
         let unit_ids = DashSet::new();
         unit_ids.insert(1);
-        
+
         let ingredient_ids = DashSet::new();
         ingredient_ids.insert(1);
 
         let invalid_unit_id = 100_000;
 
-        let recipe_ingredients = vec![
-            RecipeIngredient {
-                _recipe_id: recipe_id, 
-                unit_id: invalid_unit_id,
-                ingredient_id: 1, 
-                quantity: Faker.fake::<String>() 
-            }
-        ];
-        let steps = vec![
-            RecipeStep {
-                _step_id: 0,
-                recipe_id:recipe_id,
-                instruction:String::from("Step 1"), 
-                step_number: 1 
-            }
-        ];
+        let recipe_ingredients = vec![RecipeIngredient {
+            _recipe_id: recipe_id,
+            unit_id: invalid_unit_id,
+            ingredient_id: 1,
+            quantity: Faker.fake::<String>(),
+        }];
+        let steps = vec![RecipeStep {
+            _step_id: 0,
+            recipe_id: recipe_id,
+            instruction: String::from("Step 1"),
+            step_number: 1,
+        }];
         let unchecked_recipe = UncheckedRecipe {
             recipe_id,
             name: Faker.fake::<String>(),
             description: Faker.fake::<String>(),
             ingredients: recipe_ingredients,
-            steps
+            steps,
         };
-        let error = Recipe::parse(unchecked_recipe, &unit_ids, &ingredient_ids).expect_err("should have been an error");
-        assert_eq!(error, AppError::RecipeParsingError(RecipeParsingError::InvalidUnitId))
+        let error = Recipe::parse(unchecked_recipe, &unit_ids, &ingredient_ids)
+            .expect_err("should have been an error");
+        assert_eq!(
+            error,
+            AppError::RecipeParsingError(RecipeParsingError::InvalidUnitId)
+        )
     }
     #[test]
     fn parsing_unchecked_recipe_with_non_existent_ingredient_id_returns_error() {
@@ -181,36 +184,36 @@ mod tests {
 
         let unit_ids = DashSet::new();
         unit_ids.insert(1);
-        
+
         let ingredient_ids = DashSet::new();
         ingredient_ids.insert(1);
 
         let invalid_ingredient_id = 100_000;
 
-        let recipe_ingredients = vec![
-            RecipeIngredient {
-                _recipe_id: recipe_id, 
-                unit_id: 1,
-                ingredient_id: invalid_ingredient_id, 
-                quantity: Faker.fake::<String>() 
-            }
-        ];
-        let steps = vec![
-            RecipeStep {
-                _step_id: 0,
-                recipe_id:recipe_id,
-                instruction:String::from("Step 1"), 
-                step_number: 1 
-            }
-        ];
+        let recipe_ingredients = vec![RecipeIngredient {
+            _recipe_id: recipe_id,
+            unit_id: 1,
+            ingredient_id: invalid_ingredient_id,
+            quantity: Faker.fake::<String>(),
+        }];
+        let steps = vec![RecipeStep {
+            _step_id: 0,
+            recipe_id: recipe_id,
+            instruction: String::from("Step 1"),
+            step_number: 1,
+        }];
         let unchecked_recipe = UncheckedRecipe {
             recipe_id,
             name: Faker.fake::<String>(),
             description: Faker.fake::<String>(),
             ingredients: recipe_ingredients,
-            steps
+            steps,
         };
-        let error = Recipe::parse(unchecked_recipe, &unit_ids, &ingredient_ids).expect_err("should have been an error");
-        assert_eq!(error, AppError::RecipeParsingError(RecipeParsingError::InvalidIngredientId))
+        let error = Recipe::parse(unchecked_recipe, &unit_ids, &ingredient_ids)
+            .expect_err("should have been an error");
+        assert_eq!(
+            error,
+            AppError::RecipeParsingError(RecipeParsingError::InvalidIngredientId)
+        )
     }
 }
