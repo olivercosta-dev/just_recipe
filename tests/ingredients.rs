@@ -145,9 +145,7 @@ async fn getting_existing_ingredient_returns_ingredient_and_200_ok(
     let app_state = AppState::new(pool).await;
     let app = new_app(app_state.clone()).await;
     let ingredient = choose_random_ingredient(&app_state.pool).await;
-    let json = json!({
-        "ingredient_id": ingredient.ingredient_id
-    });
+    let json = json!({}); // this is not needed for a get
     let request = create_get_request_to("ingredients", ingredient.ingredient_id.unwrap(), json);
     let response = app.oneshot(request).await.unwrap();
 
@@ -163,5 +161,17 @@ async fn getting_existing_ingredient_returns_ingredient_and_200_ok(
     assert_eq!(response_ingredient.ingredient_id, ingredient.ingredient_id);
     assert_eq!(response_ingredient.singular_name, ingredient.singular_name);
     assert_eq!(response_ingredient.plural_name, ingredient.plural_name);
+    Ok(())
+}
+#[sqlx::test(fixtures("ingredients"))]
+async fn getting_non_existent_ingredient_returns_404_not_found(
+    pool: PgPool,
+) -> sqlx::Result<()> {
+    let app_state = AppState::new(pool).await;
+    let app = new_app(app_state.clone()).await;
+    let json = json!({}); // won't be needing this
+    let request = create_get_request_to("ingredients", -1, json);
+    let response = app.oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
     Ok(())
 }
