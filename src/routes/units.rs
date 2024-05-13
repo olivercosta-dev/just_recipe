@@ -49,7 +49,6 @@ fn remove_unit_id_from_cache(unit_id: &i32, app_state: AppState) {
     app_state.unit_ids.remove(unit_id);
 }
 
-// TODO (oliver): Removing non_existent_unit_id
 pub async fn remove_unit(
     State(app_state): State<AppState>,
     Json(delete_unit_request): Json<DeleteUnitRequest>,
