@@ -204,7 +204,7 @@ pub fn generate_random_recipe_ingredients(
             let recipe_ingredient = RecipeIngredient {
                 _recipe_id: 0,
                 ingredient_id: ingr_id,
-                unit_id: units[random_unit_index].unit_id,
+                unit_id: units[random_unit_index].unit_id.unwrap(),
                 quantity: Faker.fake::<String>(),
             };
             recipe_ingredients.push(recipe_ingredient)
@@ -285,7 +285,7 @@ mod tests {
     #[test]
     fn generates_random_recipe_ingredients() {
         let units = vec![Unit {
-            unit_id: 1,
+            unit_id: Some(1),
             singular_name: Faker.fake::<String>(),
             plural_name: Faker.fake::<String>(),
         }];

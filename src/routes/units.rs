@@ -1,7 +1,5 @@
 use axum::{
-    extract::{Path, State},
-    http::StatusCode,
-    Json,
+    extract::{Path, State}, http::StatusCode, response::IntoResponse, Json
 };
 use serde::{Deserialize, Serialize};
 use sqlx::{query, PgPool};
@@ -19,26 +17,27 @@ pub async fn add_unit(
     State(app_state): State<AppState>,
     Json(unit): Json<Unit>,
 ) -> Result<StatusCode, AppError> {
-    insert_unit_into_db(&unit, &app_state.pool).await?;
-    cache_unit_id(unit.unit_id, app_state);
+    let unit_id = insert_unit_into_db(&unit, &app_state.pool).await?;
+    cache_unit_id(unit_id, app_state);
     Ok(StatusCode::NO_CONTENT)
 }
 
-async fn insert_unit_into_db(unit: &Unit, pool: &PgPool) -> Result<(), AppError> {
+async fn insert_unit_into_db(unit: &Unit, pool: &PgPool) -> Result<i32, AppError> {
     match query!(
         r#"
             INSERT INTO unit (singular_name, plural_name) 
-            VALUES ($1, $2);
+            VALUES ($1, $2)
+            RETURNING unit_id;
         "#,
         unit.singular_name,
         unit.plural_name
     )
-    .execute(pool)
+    .fetch_one(pool)
     .await
     {
         Err(sqlx::Error::Database(err)) if err.is_unique_violation() => Err(AppError::Conflict),
         Err(_) => Err(AppError::InternalServerError),
-        Ok(_) => Ok(()),
+        Ok(rec) => Ok(rec.unit_id),
     }
 }
 
@@ -93,4 +92,30 @@ async fn update_unit_record(pool: &PgPool, unit_id: i32, unit: Unit) -> Result<(
         Err(_) => Err(AppError::InternalServerError),
         _ => Ok(()),
     }
+}
+
+pub async fn get_unit(
+    State(app_state): State<AppState>,
+    Path(unit_id): Path<i32>,
+) -> Result<impl IntoResponse, AppError> {
+    let unit = fetch_unit_from_db(&app_state.pool, unit_id).await?;
+    Ok(Json(unit))
+}
+async fn fetch_unit_from_db(
+    pool: &PgPool,
+    unit_id: i32,
+) -> Result<Unit, AppError> {
+    let unit = sqlx::query_as!(
+        Unit,
+        r#"
+            SELECT * 
+            FROM unit
+            WHERE unit_id = $1
+        "#,
+        unit_id
+    )
+    .fetch_optional(pool)
+    .await?
+    .ok_or(AppError::NotFound)?;
+    Ok(unit)
 }
