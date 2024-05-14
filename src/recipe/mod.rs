@@ -1,6 +1,8 @@
-use crate::app::AppError;
+use crate::{app::AppError, ingredient::Ingredient};
 use dashmap::DashSet;
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
+use sqlx::PgPool;
 
 #[derive(Deserialize, Debug)]
 #[serde(rename(deserialize = "recipe"))]
@@ -12,7 +14,8 @@ pub struct UncheckedRecipe {
     pub ingredients: Vec<RecipeIngredient>,
     pub steps: Vec<RecipeStep>,
 }
-
+// TODO (oliver): Make the recipe step always sorted!
+// Another idea: Make CompressedRecipe, and FullRecipe so that they are more easily distinguishable...
 #[derive(Serialize, Debug)]
 pub struct Recipe {
     pub recipe_id: i32,
@@ -21,11 +24,18 @@ pub struct Recipe {
     pub ingredients: Vec<RecipeIngredient>,
     pub steps: Vec<RecipeStep>,
 }
-
+#[derive(Serialize, Deserialize)]
+pub struct DetailedRecipe {
+    pub recipe_id: i32,
+    pub name: String,
+    pub description: String,
+    pub ingredients: Vec<Ingredient>,
+    pub steps: Vec<RecipeStep>,
+}
 #[derive(Serialize, Deserialize, Debug)]
 pub struct RecipeIngredient {
     #[serde(skip)]
-    pub _recipe_id: i32, // shouldn't really be used outside of the Recipe
+    pub recipe_id: i32, // shouldn't really be used outside of the Recipe
     pub ingredient_id: i32,
     pub unit_id: i32,
     pub quantity: String,
@@ -34,7 +44,7 @@ pub struct RecipeIngredient {
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct RecipeStep {
     #[serde(skip)]
-    pub _step_id: i32,
+    pub step_id: i32,
     #[serde(skip)]
     pub recipe_id: i32,
     pub step_number: i32,
@@ -121,6 +131,32 @@ impl Recipe {
         }
         Ok(recipe)
     }
+    // TODO (oliver): Make parse a trait function.
+    pub async fn parse_detailed(recipe: Recipe, pool: &PgPool) -> Result<DetailedRecipe, AppError> {
+        let ingr_ids = recipe
+            .ingredients
+            .iter()
+            .map(|ingr| ingr.ingredient_id)
+            .collect_vec();
+        let ingredients: Vec<Ingredient> = sqlx::query_as!(
+            Ingredient,
+            r#"
+                SELECT *
+                FROM ingredient
+                WHERE ingredient_id = ANY($1)
+            "#,
+            &ingr_ids
+        )
+        .fetch_all(pool)
+        .await?;
+        Ok(DetailedRecipe {
+            recipe_id: recipe.recipe_id,
+            name: recipe.name,
+            description: recipe.description,
+            ingredients,
+            steps: recipe.steps,
+        })
+    }
 }
 
 impl From<RecipeParsingError> for AppError {
@@ -151,13 +187,13 @@ mod tests {
         let invalid_unit_id = 100_000;
 
         let recipe_ingredients = vec![RecipeIngredient {
-            _recipe_id: recipe_id,
+            recipe_id: recipe_id,
             unit_id: invalid_unit_id,
             ingredient_id: 1,
             quantity: Faker.fake::<String>(),
         }];
         let steps = vec![RecipeStep {
-            _step_id: 0,
+            step_id: 0,
             recipe_id: recipe_id,
             instruction: String::from("Step 1"),
             step_number: 1,
@@ -191,13 +227,13 @@ mod tests {
         let invalid_ingredient_id = 100_000;
 
         let recipe_ingredients = vec![RecipeIngredient {
-            _recipe_id: recipe_id,
+            recipe_id: recipe_id,
             unit_id: 1,
             ingredient_id: invalid_ingredient_id,
             quantity: Faker.fake::<String>(),
         }];
         let steps = vec![RecipeStep {
-            _step_id: 0,
+            step_id: 0,
             recipe_id: recipe_id,
             instruction: String::from("Step 1"),
             step_number: 1,

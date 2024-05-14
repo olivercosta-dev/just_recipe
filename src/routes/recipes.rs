@@ -2,10 +2,11 @@ use crate::{app::*, recipe::*};
 use axum::{
     extract::{Path, State},
     http::StatusCode,
+    response::IntoResponse,
     Json,
 };
 use serde::Deserialize;
-use sqlx::{postgres::PgQueryResult, Error as SqlxError};
+use sqlx::{pool, postgres::PgQueryResult, Error as SqlxError, PgPool};
 
 #[derive(Deserialize)]
 pub struct RemoveRecipeRequest {
@@ -217,4 +218,59 @@ async fn delete_recipe_ingredients(recipe_id: i32, app_state: &AppState) -> Resu
     .execute(&app_state.pool)
     .await?;
     Ok(())
+}
+
+pub async fn get_recipe(
+    State(app_state): State<AppState>,
+    Path(recipe_id): Path<i32>,
+) -> Result<impl IntoResponse, AppError> {
+    let recipe = fetch_recipe_from_db(&app_state.pool, recipe_id).await?;
+    let detailed = Recipe::parse_detailed(recipe, &app_state.pool).await?; 
+    Ok(Json(detailed))
+}
+
+async fn fetch_recipe_from_db(pool: &PgPool, recipe_id: i32) -> Result<Recipe, AppError> {
+    let (name, description) = {
+        let record = sqlx::query!(
+            r#"
+            SELECT name, description
+            FROM recipe
+            WHERE recipe_id = $1
+        "#,
+            recipe_id
+        )
+        .fetch_one(pool)
+        .await?;
+        (record.name, record.description)
+    };
+    let ingredients = sqlx::query_as!(
+        RecipeIngredient,
+        r#"
+            SELECT recipe_id, ingredient_id, unit_id, quantity
+            FROM recipe_ingredient
+            WHERE recipe_id = $1
+        "#,
+        recipe_id
+    )
+    .fetch_all(pool)
+    .await?;
+    let steps = sqlx::query_as!(
+        RecipeStep,
+        r#"
+            SELECT step_id, recipe_id, step_number, instruction
+            FROM step
+            WHERE recipe_id = $1
+            ORDER BY step_number
+        "#,
+        recipe_id
+    )
+    .fetch_all(pool)
+    .await?;
+    Ok(Recipe {
+        recipe_id,
+        name,
+        description,
+        ingredients,
+        steps,
+    })
 }

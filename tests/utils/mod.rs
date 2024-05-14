@@ -4,6 +4,7 @@ use std::collections::HashSet;
 
 use axum::{body::Body, http::Request};
 use fake::{Fake, Faker};
+use itertools::Itertools;
 use just_recipe::{
     ingredient::Ingredient,
     recipe::{RecipeIngredient, RecipeStep},
@@ -71,7 +72,7 @@ pub fn generate_random_number_of_steps() -> Vec<RecipeStep> {
     let number_of_steps = (2..10).fake::<i32>();
     (1..number_of_steps)
         .map(|step_number| RecipeStep {
-            _step_id: 0,
+            step_id: 0,
             recipe_id: 0,
             step_number,
             instruction: Faker.fake::<String>(),
@@ -83,10 +84,10 @@ pub fn generate_random_number_of_steps() -> Vec<RecipeStep> {
 pub async fn assert_recipe_exists(pool: &PgPool, recipe_name: &str, description: &str) -> i32 {
     let recipe_record = sqlx::query!(
         r#"
-                SELECT recipe_id, name, description
-                FROM recipe
-                WHERE name = $1 and description = $2;
-            "#,
+            SELECT recipe_id, name, description
+            FROM recipe
+            WHERE name = $1 and description = $2;
+        "#,
         recipe_name,
         description
     )
@@ -97,7 +98,7 @@ pub async fn assert_recipe_exists(pool: &PgPool, recipe_name: &str, description:
     assert_eq!(
         (
             recipe_record.name.as_str(),
-            recipe_record.description.unwrap().as_str()
+            recipe_record.description.as_str()
         ),
         (recipe_name, description)
     );
@@ -137,10 +138,10 @@ pub async fn assert_recipe_ingredients_exist(
             (
                 record.recipe_id,
                 record.ingredient_id,
-                record.unit_id.unwrap(),
-                record.quantity.as_deref().unwrap()
+                record.unit_id,
+                &record.quantity.to_string()
             ),
-            (recipe_id, ingredient_id, unit_id, quantity)
+            (recipe_id, ingredient_id, unit_id, &quantity.to_string())
         );
     }
 }
@@ -148,11 +149,11 @@ pub async fn assert_recipe_ingredients_exist(
 pub async fn assert_recipe_steps_exist(pool: &PgPool, recipe_steps: Vec<Value>, recipe_id: i32) {
     let ordered_recipe_step_records = sqlx::query!(
         r#"
-                SELECT step_id, recipe_id, step_number, instruction
-                FROM step
-                WHERE recipe_id = $1
-                ORDER BY step_number;
-            "#,
+            SELECT step_id, recipe_id, step_number, instruction
+            FROM step
+            WHERE recipe_id = $1
+            ORDER BY step_number;
+        "#,
         recipe_id
     )
     .fetch_all(pool)
@@ -174,9 +175,9 @@ pub async fn assert_recipe_steps_exist(pool: &PgPool, recipe_steps: Vec<Value>, 
         );
         let recipe_step_record = &ordered_recipe_step_records[index];
         let (record_recipe_id, record_step_number, record_instruction) = (
-            recipe_step_record.recipe_id.unwrap(),
-            recipe_step_record.step_number.unwrap(),
-            recipe_step_record.instruction.clone().unwrap(),
+            recipe_step_record.recipe_id,
+            recipe_step_record.step_number,
+            recipe_step_record.instruction.clone(),
         );
         assert_eq!(
             (record_recipe_id, record_step_number, record_instruction),
@@ -202,7 +203,7 @@ pub fn generate_random_recipe_ingredients(
         if ingredient_ids.insert(ingr_id) {
             let random_unit_index = (0..units.len().try_into().unwrap()).fake::<usize>();
             let recipe_ingredient = RecipeIngredient {
-                _recipe_id: 0,
+                recipe_id: 0,
                 ingredient_id: ingr_id,
                 unit_id: units[random_unit_index].unit_id.unwrap(),
                 quantity: Faker.fake::<String>(),
@@ -275,6 +276,27 @@ pub async fn choose_random_recipe_id(pool: &PgPool) -> i32 {
     recipes[random_index].recipe_id
 }
 
+pub async fn assert_detailed_recipe_ingredients_exist(pool: &PgPool, ingredients: Vec<Ingredient>) {
+    let ingr_ids = ingredients
+        .iter()
+        .map(|ingr| ingr.ingredient_id.unwrap())
+        .collect_vec();
+    let ingr_records = sqlx::query_as!(
+        Ingredient,
+        r#"
+            SELECT *
+            FROM ingredient
+            WHERE ingredient_id = ANY($1);
+        "#,
+        &ingr_ids
+    )
+    .fetch_all(pool)
+    .await
+    .unwrap();
+
+    assert_eq!(ingr_records.len(), ingredients.len());
+}
+
 #[cfg(test)]
 mod tests {
     use fake::{Fake, Faker};
@@ -298,3 +320,5 @@ mod tests {
         assert!(recipe_ingredients.len() > 0);
     }
 }
+
+

@@ -1,9 +1,13 @@
 use std::vec;
 
-use axum::http::StatusCode;
+use axum::{body::to_bytes, http::StatusCode};
 use fake::{Fake, Faker};
+use itertools::Itertools;
 use just_recipe::{
-    app::{new_app, AppState}, ingredient::Ingredient, unit::Unit
+    app::{new_app, AppState},
+    ingredient::Ingredient,
+    recipe::{DetailedRecipe, UncheckedRecipe},
+    unit::Unit,
 };
 
 mod utils;
@@ -238,9 +242,7 @@ async fn deleting_existing_recipe_gets_removed_returns_204_content(
 }
 
 #[sqlx::test(fixtures("units", "ingredients", "recipes", "recipe_ingredients"))]
-async fn deleting_non_existent_recipe_returns_404_not_found(
-    pool: PgPool,
-) -> sqlx::Result<()> {
+async fn deleting_non_existent_recipe_returns_404_not_found(pool: PgPool) -> sqlx::Result<()> {
     let app_state = AppState::new(pool).await;
     let app = new_app(app_state.clone()).await;
     let recipe_id = -1;
@@ -316,7 +318,7 @@ async fn updating_recipe_with_non_existent_unit_returns_422_unproccessable_entit
     let recipe_description = Faker.fake::<String>();
     let (ingredients, _) = fetch_ingredients_and_units(&app_state.pool).await;
     let units = vec![Unit {
-        unit_id: 100_000,
+        unit_id: Some(100_000),
         singular_name: Faker.fake::<String>(),
         plural_name: Faker.fake::<String>(),
     }];
@@ -336,6 +338,7 @@ async fn updating_recipe_with_non_existent_unit_returns_422_unproccessable_entit
 
     Ok(())
 }
+
 #[sqlx::test(fixtures("units", "ingredients", "recipes", "recipe_ingredients"))]
 async fn updating_recipe_with_non_existent_ingredient_id_returns_422_unproccessable_entity(
     pool: PgPool,
@@ -353,10 +356,9 @@ async fn updating_recipe_with_non_existent_ingredient_id_returns_422_unproccessa
     }];
     println!("Units: {:?}", &units);
     println!("Ingredients: {:?}", &ingredients);
-    let recipe_ing = generate_random_recipe_ingredients(units, ingredients); 
+    let recipe_ing = generate_random_recipe_ingredients(units, ingredients);
     println!("Recipe_ingredients: {:?}", &recipe_ing);
-    let recipe_ingredients =
-    create_recipe_ingredients_json(&recipe_ing);
+    let recipe_ingredients = create_recipe_ingredients_json(&recipe_ing);
     let recipe_steps = create_recipe_steps_json_for_request(generate_random_number_of_steps());
     let json = json!({
         "recipe_id": recipe_id,
@@ -370,3 +372,38 @@ async fn updating_recipe_with_non_existent_ingredient_id_returns_422_unproccessa
     assert_eq!(response.status(), StatusCode::UNPROCESSABLE_ENTITY);
     Ok(())
 }
+
+#[sqlx::test(fixtures("units", "ingredients", "recipes", "recipe_ingredients", "steps"))]
+async fn getting_existing_recipe_returns_recipe_and_200_ok(pool: PgPool) -> sqlx::Result<()> {
+    let app_state = AppState::new(pool).await;
+    let app = new_app(app_state.clone()).await;
+    let recipe_id = choose_random_recipe_id(&app_state.pool).await;
+    let request = create_get_request_to("recipes", recipe_id, json!({}));
+    let response = app.oneshot(request).await.unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let bytes = to_bytes(response.into_body(), usize::MAX)
+        .await
+        .expect("Failed to read body bytes");
+    
+    let response_recipe: DetailedRecipe =
+        serde_json::from_slice(&bytes).expect("Failed to deserialize JSON");
+
+    let recipe_id_in_db = assert_recipe_exists(
+        &app_state.pool,
+        &response_recipe.name,
+        &response_recipe.description,
+    )
+    .await;
+    assert_eq!(response_recipe.recipe_id, recipe_id_in_db);
+    assert_recipe_steps_exist(
+        &app_state.pool,
+        response_recipe.steps.iter().map(|f| json!(f)).collect_vec(),
+        recipe_id,
+    )
+    .await;
+    assert_detailed_recipe_ingredients_exist(&app_state.pool, response_recipe.ingredients).await;
+    Ok(())
+}
+
