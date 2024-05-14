@@ -16,7 +16,7 @@ pub struct UncheckedRecipe {
 }
 // TODO (oliver): Make the recipe step always sorted!
 #[derive(Serialize, Debug)]
-pub struct Recipe {
+pub struct CompressedRecipe {
     pub recipe_id: i32,
     pub name: String,
     pub description: String,
@@ -59,7 +59,7 @@ pub enum RecipeParsingError {
     DuplicateIngredientId,
 }
 
-impl Recipe {
+impl CompressedRecipe {
     /// Returns a fully-valid recipe, whose ingredients
     /// are backed by the database.
     pub fn parse(
@@ -67,7 +67,7 @@ impl Recipe {
         unit_ids: &DashSet<i32>,
         ingredient_ids: &DashSet<i32>,
     ) -> Result<Self, AppError> {
-        impl TryFrom<UncheckedRecipe> for Recipe {
+        impl TryFrom<UncheckedRecipe> for CompressedRecipe {
             type Error = AppError;
 
             fn try_from(unchecked_recipe: UncheckedRecipe) -> Result<Self, AppError> {
@@ -98,7 +98,7 @@ impl Recipe {
                         ));
                     }
                 }
-                Ok(Recipe {
+                Ok(CompressedRecipe {
                     recipe_id: unchecked_recipe.recipe_id,
                     name: unchecked_recipe.name,
                     description: unchecked_recipe.description,
@@ -108,7 +108,7 @@ impl Recipe {
             }
         }
 
-        let recipe: Recipe = unchecked_recipe.try_into()?;
+        let recipe: CompressedRecipe = unchecked_recipe.try_into()?;
         let contains_invalid_ingredient_id = recipe
             .ingredients
             .iter()
@@ -132,7 +132,7 @@ impl Recipe {
         Ok(recipe)
     }
     // TODO (oliver): Make parse a trait function.
-    pub async fn parse_detailed(recipe: Recipe, pool: &PgPool) -> Result<DbRecipe, AppError> {
+    pub async fn parse_detailed(recipe: CompressedRecipe, pool: &PgPool) -> Result<DbRecipe, AppError> {
         let ingr_ids = recipe
             .ingredients
             .iter()
@@ -169,7 +169,7 @@ impl From<RecipeParsingError> for AppError {
 mod tests {
     use crate::{
         app::AppError,
-        recipe::{Recipe, RecipeIngredient, RecipeParsingError, RecipeStep, UncheckedRecipe},
+        recipe::{CompressedRecipe, RecipeIngredient, RecipeParsingError, RecipeStep, UncheckedRecipe},
     };
     // TODO (oliver): There is some refactoring here to be done. Make it cleaner, more general.
     #[test]
@@ -205,7 +205,7 @@ mod tests {
             ingredients: recipe_ingredients,
             steps,
         };
-        let error = Recipe::parse(unchecked_recipe, &unit_ids, &ingredient_ids)
+        let error = CompressedRecipe::parse(unchecked_recipe, &unit_ids, &ingredient_ids)
             .expect_err("should have been an error");
         assert_eq!(
             error,
@@ -245,7 +245,7 @@ mod tests {
             ingredients: recipe_ingredients,
             steps,
         };
-        let error = Recipe::parse(unchecked_recipe, &unit_ids, &ingredient_ids)
+        let error = CompressedRecipe::parse(unchecked_recipe, &unit_ids, &ingredient_ids)
             .expect_err("should have been an error");
         assert_eq!(
             error,
