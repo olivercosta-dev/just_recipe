@@ -407,3 +407,16 @@ async fn getting_existing_recipe_returns_recipe_and_200_ok(pool: PgPool) -> sqlx
     Ok(())
 }
 
+
+#[sqlx::test(fixtures("units", "ingredients", "recipes", "recipe_ingredients", "steps"))]
+async fn getting_non_existent_recipe_returns_404_not_found(pool: PgPool) -> sqlx::Result<()> {
+    let app_state = AppState::new(pool).await;
+    let app = new_app(app_state.clone()).await;
+    let recipe_id = -1;
+    let request = create_get_request_to("recipes", recipe_id, json!({}));
+    let response = app.oneshot(request).await.unwrap();
+
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
+    Ok(())
+}
+

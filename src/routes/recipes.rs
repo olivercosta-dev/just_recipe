@@ -231,7 +231,8 @@ pub async fn get_recipe(
 
 async fn fetch_recipe_from_db(pool: &PgPool, recipe_id: i32) -> Result<Recipe, AppError> {
     let (name, description) = {
-        let record = sqlx::query!(
+        
+        let optional_record = sqlx::query!(
             r#"
             SELECT name, description
             FROM recipe
@@ -239,8 +240,12 @@ async fn fetch_recipe_from_db(pool: &PgPool, recipe_id: i32) -> Result<Recipe, A
         "#,
             recipe_id
         )
-        .fetch_one(pool)
+        .fetch_optional(pool)
         .await?;
+        if optional_record.is_none() {
+            return Err(AppError::NotFound);
+        }
+        let record = optional_record.unwrap();
         (record.name, record.description)
     };
     let ingredients = sqlx::query_as!(
