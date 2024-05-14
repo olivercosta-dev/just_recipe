@@ -6,7 +6,7 @@ use itertools::Itertools;
 use just_recipe::{
     app::{new_app, AppState},
     ingredient::Ingredient,
-    recipe::{DetailedRecipe, UncheckedRecipe},
+    recipe::{DbRecipe, UncheckedRecipe},
     unit::Unit,
 };
 
@@ -387,7 +387,7 @@ async fn getting_existing_recipe_returns_recipe_and_200_ok(pool: PgPool) -> sqlx
         .await
         .expect("Failed to read body bytes");
     
-    let response_recipe: DetailedRecipe =
+    let response_recipe: DbRecipe =
         serde_json::from_slice(&bytes).expect("Failed to deserialize JSON");
 
     let recipe_id_in_db = assert_recipe_exists(

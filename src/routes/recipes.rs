@@ -6,7 +6,7 @@ use axum::{
     Json,
 };
 use serde::Deserialize;
-use sqlx::{pool, postgres::PgQueryResult, Error as SqlxError, PgPool};
+use sqlx::{postgres::PgQueryResult, Error as SqlxError, PgPool};
 
 #[derive(Deserialize)]
 pub struct RemoveRecipeRequest {

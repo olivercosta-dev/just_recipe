@@ -15,7 +15,6 @@ pub struct UncheckedRecipe {
     pub steps: Vec<RecipeStep>,
 }
 // TODO (oliver): Make the recipe step always sorted!
-// Another idea: Make CompressedRecipe, and FullRecipe so that they are more easily distinguishable...
 #[derive(Serialize, Debug)]
 pub struct Recipe {
     pub recipe_id: i32,
@@ -25,7 +24,7 @@ pub struct Recipe {
     pub steps: Vec<RecipeStep>,
 }
 #[derive(Serialize, Deserialize)]
-pub struct DetailedRecipe {
+pub struct DbRecipe {
     pub recipe_id: i32,
     pub name: String,
     pub description: String,
@@ -59,6 +58,7 @@ pub enum RecipeParsingError {
     InvalidIngredientId,
     DuplicateIngredientId,
 }
+
 impl Recipe {
     /// Returns a fully-valid recipe, whose ingredients
     /// are backed by the database.
@@ -132,7 +132,7 @@ impl Recipe {
         Ok(recipe)
     }
     // TODO (oliver): Make parse a trait function.
-    pub async fn parse_detailed(recipe: Recipe, pool: &PgPool) -> Result<DetailedRecipe, AppError> {
+    pub async fn parse_detailed(recipe: Recipe, pool: &PgPool) -> Result<DbRecipe, AppError> {
         let ingr_ids = recipe
             .ingredients
             .iter()
@@ -149,7 +149,7 @@ impl Recipe {
         )
         .fetch_all(pool)
         .await?;
-        Ok(DetailedRecipe {
+        Ok(DbRecipe {
             recipe_id: recipe.recipe_id,
             name: recipe.name,
             description: recipe.description,
