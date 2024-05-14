@@ -6,7 +6,7 @@ use itertools::Itertools;
 use just_recipe::{
     app::{new_app, AppState},
     ingredient::Ingredient,
-    recipe::{DbRecipe, UncheckedRecipe},
+    recipe::{DbRecipe, CompactRecipe},
     unit::Unit,
 };
 

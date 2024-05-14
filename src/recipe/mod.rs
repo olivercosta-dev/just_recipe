@@ -1,58 +1,46 @@
-use crate::{app::AppError, ingredient::Ingredient};
+use std::ops::Not;
+
+use crate::{app::AppError, ingredient::Ingredient, unit::Unit};
+use core::marker::PhantomData;
 use dashmap::DashSet;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
-use sqlx::PgPool;
 
-#[derive(Deserialize, Debug)]
-#[serde(rename(deserialize = "recipe"))]
-pub struct UncheckedRecipe {
-    #[serde(skip)]
-    pub recipe_id: i32,
-    pub name: String,
-    pub description: String,
-    pub ingredients: Vec<CompressedIngredient>,
-    pub steps: Vec<RecipeStep>,
-}
 // TODO (oliver): Make the recipe step always sorted!
-/// It is called CompressedRecipe, because 
-/// it contains reduced information about the recipe.
-/// (Compressed Ingredients)
-#[derive(Serialize, Debug)]
-pub struct CompressedRecipe {
-    pub recipe_id: i32,
-    pub name: String,
-    pub description: String,
-    pub ingredients: Vec<CompressedIngredient>,
-    pub steps: Vec<RecipeStep>,
+
+#[derive(Serialize, Deserialize)]
+struct Recipe<I: RecipeIngredient, BackedState> {
+    recipe_id: Option<i32>,
+    name: String,
+    ingredients: I,
+    steps: Vec<RecipeStep>,
+    #[serde(skip)]
+    backed_state: PhantomData<BackedState>,
+}
+
+struct Backed;
+struct NotBacked;
+
+pub trait RecipeIngredient {
+    type Ingredient;
+    type Unit;
+    fn ingredient(&self) -> &Ingredient;
+    fn unit(&self) -> &Unit;
+    fn quantity(&self) -> &str;
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct DetailedRecipe {
-    pub recipe_id: i32,
-    pub name: String,
-    pub description: String,
-    pub ingredients: Vec<Ingredient>,
-    pub steps: Vec<RecipeStep>,
+struct CompactIngredient {
+    unit_id: i32,
+    ingredient_id: i32,
+    quantity: String,
 }
-enum DbRecipe {
-    Detailed(DetailedRecipe),
-    Compressed(CompressedRecipe)
-}
-impl DbRecipe {
 
-}
-/// It is compressed ingredient, as it only contains 
-/// unit_id, ingredient_id, quantity
-/// without any more information. 
-/// (no names for units and ingredients)
-#[derive(Serialize, Deserialize, Debug)]
-pub struct CompressedIngredient {
-    #[serde(skip)]
-    pub recipe_id: i32, // shouldn't really be used outside of the Recipe
-    pub ingredient_id: i32,
-    pub unit_id: i32,
-    pub quantity: String,
+#[derive(Serialize, Deserialize)]
+struct DetailedIngredient {
+    ingredient: Ingredient,
+    unit: Unit,
+    quantity: String,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -74,56 +62,113 @@ pub enum RecipeParsingError {
     DuplicateIngredientId,
 }
 
-impl CompressedRecipe {
-    /// Returns a fully-valid recipe, whose ingredients
-    /// are backed by the database.
-    pub fn parse(
-        unchecked_recipe: UncheckedRecipe,
+impl RecipeIngredient for CompactIngredient {
+    type Ingredient = i32;
+    type Unit = i32;
+
+    fn ingredient(&self) -> i32 {
+        self.ingredient_id
+    }
+
+    fn unit(&self) -> i32 {
+        self.unit_id
+    }
+
+    fn quantity(&self) -> &str {
+        &self.quantity
+    }
+}
+
+impl RecipeIngredient for DetailedIngredient {
+    type Ingredient = Ingredient;
+    type Unit = Unit;
+    fn ingredient(&self) -> Ingredient {
+        self.ingredient
+    }
+
+    fn unit(&self) -> Unit {
+        self.unit
+    }
+
+    fn quantity(&self) -> &str {
+        &self.quantity
+    }
+}
+
+// pub async fn parse_detailed(recipe: CompactRecipe, pool: &PgPool) -> Result<DbRecipe, AppError> {
+//     let ingr_ids = recipe
+//         .ingredients
+//         .iter()
+//         .map(|ingr| ingr.ingredient_id)
+//         .collect_vec();
+//     let ingredients: Vec<Ingredient> = sqlx::query_as!(
+//         Ingredient,
+//         r#"
+//                 SELECT *
+//                 FROM ingredient
+//                 WHERE ingredient_id = ANY($1)
+//             "#,
+//         &ingr_ids
+//     )
+//     .fetch_all(pool)
+//     .await?;
+//     Ok(DbRecipe {
+//         recipe_id: recipe.recipe_id,
+//         name: recipe.name,
+//         description: recipe.description,
+//         ingredients,
+//         steps: recipe.steps,
+//     })
+// }
+
+// impl TryFrom<CompactRecipe> for CompactRecipe {
+//     type Error = AppError;
+//     fn try_from(unchecked_recipe: CompactRecipe) -> Result<Self, AppError> {
+//         // Recipe_id should always be non-negative
+//         if unchecked_recipe.recipe_id < 0 {
+//             return Err(AppError::RecipeParsingError(
+//                 RecipeParsingError::RecipeIdNotPositive,
+//             ));
+//         }
+//         let mut ordered_recipe_steps = unchecked_recipe.steps.clone();
+//         ordered_recipe_steps.sort_by(|a, b| a.step_number.cmp(&b.step_number));
+//         // Only recipes with complete steps (no holes, and in-order) are allowed.
+//         if ordered_recipe_steps[0].step_number != 1 {
+//             return Err(AppError::RecipeParsingError(
+//                 RecipeParsingError::StepNumbersOutOfOrder,
+//             ));
+//         }
+//         // Only recipes with steps in correct order are allowed.
+//         for index in 0..ordered_recipe_steps.len() - 1 {
+//             if ordered_recipe_steps[index].step_number
+//                 >= ordered_recipe_steps[index + 1].step_number
+//                 || ordered_recipe_steps[index].step_number + 1
+//                     != ordered_recipe_steps[index + 1].step_number
+//             {
+//                 return Err(AppError::RecipeParsingError(
+//                     RecipeParsingError::StepNumbersOutOfOrder,
+//                 ));
+//             }
+//         }
+//         Ok(CompactRecipe {
+//             recipe_id: unchecked_recipe.recipe_id,
+//             name: unchecked_recipe.name,
+//             description: unchecked_recipe.description,
+//             ingredients: unchecked_recipe.ingredients,
+//             steps: unchecked_recipe.steps,
+//         })
+//     }
+// }
+
+impl Recipe<CompactIngredient, NotBacked> {
+    pub fn to_backed(
+        self,
         unit_ids: &DashSet<i32>,
         ingredient_ids: &DashSet<i32>,
-    ) -> Result<Self, AppError> {
-        impl TryFrom<UncheckedRecipe> for CompressedRecipe {
-            type Error = AppError;
+    ) -> Result<Recipe<CompactIngredient, Backed>, AppError> {
 
-            fn try_from(unchecked_recipe: UncheckedRecipe) -> Result<Self, AppError> {
-                // Recipe_id should always be non-negative
-                if unchecked_recipe.recipe_id < 0 {
-                    return Err(AppError::RecipeParsingError(
-                        RecipeParsingError::RecipeIdNotPositive,
-                    ));
-                }
-                let mut ordered_recipe_steps = unchecked_recipe.steps.clone();
-                ordered_recipe_steps.sort_by(|a, b| a.step_number.cmp(&b.step_number));
 
-                // Only recipes with complete steps (no holes, and in-order) are allowed.
-                if ordered_recipe_steps[0].step_number != 1 {
-                    return Err(AppError::RecipeParsingError(
-                        RecipeParsingError::StepNumbersOutOfOrder,
-                    ));
-                }
-                // Only recipes with steps in correct order are allowed.
-                for index in 0..ordered_recipe_steps.len() - 1 {
-                    if ordered_recipe_steps[index].step_number
-                        >= ordered_recipe_steps[index + 1].step_number
-                        || ordered_recipe_steps[index].step_number + 1
-                            != ordered_recipe_steps[index + 1].step_number
-                    {
-                        return Err(AppError::RecipeParsingError(
-                            RecipeParsingError::StepNumbersOutOfOrder,
-                        ));
-                    }
-                }
-                Ok(CompressedRecipe {
-                    recipe_id: unchecked_recipe.recipe_id,
-                    name: unchecked_recipe.name,
-                    description: unchecked_recipe.description,
-                    ingredients: unchecked_recipe.ingredients,
-                    steps: unchecked_recipe.steps,
-                })
-            }
-        }
-
-        let recipe: CompressedRecipe = unchecked_recipe.try_into()?;
+        let recipe: CompactRecipe = unchecked_recipe.try_into()?;
         let contains_invalid_ingredient_id = recipe
             .ingredients
             .iter()
@@ -146,32 +191,6 @@ impl CompressedRecipe {
         }
         Ok(recipe)
     }
-    // TODO (oliver): Make parse a trait function.
-    pub async fn parse_detailed(recipe: CompressedRecipe, pool: &PgPool) -> Result<DbRecipe, AppError> {
-        let ingr_ids = recipe
-            .ingredients
-            .iter()
-            .map(|ingr| ingr.ingredient_id)
-            .collect_vec();
-        let ingredients: Vec<Ingredient> = sqlx::query_as!(
-            Ingredient,
-            r#"
-                SELECT *
-                FROM ingredient
-                WHERE ingredient_id = ANY($1)
-            "#,
-            &ingr_ids
-        )
-        .fetch_all(pool)
-        .await?;
-        Ok(DbRecipe {
-            recipe_id: recipe.recipe_id,
-            name: recipe.name,
-            description: recipe.description,
-            ingredients,
-            steps: recipe.steps,
-        })
-    }
 }
 
 impl From<RecipeParsingError> for AppError {
@@ -184,7 +203,9 @@ impl From<RecipeParsingError> for AppError {
 mod tests {
     use crate::{
         app::AppError,
-        recipe::{CompressedRecipe, CompressedIngredient, RecipeParsingError, RecipeStep, UncheckedRecipe},
+        recipe::{
+            CompactRecipe, CompactRecipe, CompressedIngredient, RecipeParsingError, RecipeStep,
+        },
     };
     // TODO (oliver): There is some refactoring here to be done. Make it cleaner, more general.
     #[test]
@@ -213,14 +234,14 @@ mod tests {
             instruction: String::from("Step 1"),
             step_number: 1,
         }];
-        let unchecked_recipe = UncheckedRecipe {
+        let unchecked_recipe = CompactRecipe {
             recipe_id,
             name: Faker.fake::<String>(),
             description: Faker.fake::<String>(),
             ingredients: recipe_ingredients,
             steps,
         };
-        let error = CompressedRecipe::parse(unchecked_recipe, &unit_ids, &ingredient_ids)
+        let error = CompactRecipe::parse(unchecked_recipe, &unit_ids, &ingredient_ids)
             .expect_err("should have been an error");
         assert_eq!(
             error,
@@ -253,14 +274,14 @@ mod tests {
             instruction: String::from("Step 1"),
             step_number: 1,
         }];
-        let unchecked_recipe = UncheckedRecipe {
+        let unchecked_recipe = CompactRecipe {
             recipe_id,
             name: Faker.fake::<String>(),
             description: Faker.fake::<String>(),
             ingredients: recipe_ingredients,
             steps,
         };
-        let error = CompressedRecipe::parse(unchecked_recipe, &unit_ids, &ingredient_ids)
+        let error = CompactRecipe::parse(unchecked_recipe, &unit_ids, &ingredient_ids)
             .expect_err("should have been an error");
         assert_eq!(
             error,

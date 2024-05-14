@@ -43,9 +43,9 @@ pub struct RemoveRecipeRequest {
 */
 pub async fn add_recipe(
     State(app_state): State<AppState>,
-    Json(unchecked_recipe): Json<UncheckedRecipe>,
+    Json(unchecked_recipe): Json<CompactRecipe>,
 ) -> Result<StatusCode, AppError> {
-    let recipe: CompressedRecipe = unchecked_recipe.try_into()?;
+    let recipe: CompactRecipe = unchecked_recipe.try_into()?;
     let mut transaction = app_state.pool.begin().await?;
     let recipe_id = insert_recipe(&recipe, &mut transaction).await?;
     bulk_insert_ingredients(recipe.ingredients, recipe_id, &mut transaction).await?;
@@ -55,7 +55,7 @@ pub async fn add_recipe(
 }
 
 async fn insert_recipe(
-    recipe: &CompressedRecipe,
+    recipe: &CompactRecipe,
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
 ) -> Result<i32, AppError> {
     let recipe_query_result = sqlx::query!(
@@ -152,9 +152,9 @@ pub async fn remove_recipe(
 pub async fn update_recipe(
     State(app_state): State<AppState>,
     Path(recipe_id): Path<i32>,
-    Json(unchecked_recipe): Json<UncheckedRecipe>,
+    Json(unchecked_recipe): Json<CompactRecipe>,
 ) -> Result<StatusCode, AppError> {
-    let recipe: CompressedRecipe = CompressedRecipe::parse(
+    let recipe: CompactRecipe = CompactRecipe::parse(
         unchecked_recipe,
         &app_state.unit_ids,
         &app_state.ingredient_ids,
@@ -171,7 +171,7 @@ pub async fn update_recipe(
 }
 
 async fn update_recipe_record(
-    recipe: &CompressedRecipe,
+    recipe: &CompactRecipe,
     recipe_id: i32,
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
 ) -> Result<(), AppError> {
@@ -225,11 +225,11 @@ pub async fn get_recipe(
     Path(recipe_id): Path<i32>,
 ) -> Result<impl IntoResponse, AppError> {
     let recipe = fetch_recipe_from_db(&app_state.pool, recipe_id).await?;
-    let detailed = CompressedRecipe::parse_detailed(recipe, &app_state.pool).await?; 
+    let detailed = CompactRecipe::parse_detailed(recipe, &app_state.pool).await?; 
     Ok(Json(detailed))
 }
 
-async fn fetch_recipe_from_db(pool: &PgPool, recipe_id: i32) -> Result<CompressedRecipe, AppError> {
+async fn fetch_recipe_from_db(pool: &PgPool, recipe_id: i32) -> Result<CompactRecipe, AppError> {
     let (name, description) = {
         
         let optional_record = sqlx::query!(
@@ -271,7 +271,7 @@ async fn fetch_recipe_from_db(pool: &PgPool, recipe_id: i32) -> Result<Compresse
     )
     .fetch_all(pool)
     .await?;
-    Ok(CompressedRecipe {
+    Ok(CompactRecipe {
         recipe_id,
         name,
         description,
