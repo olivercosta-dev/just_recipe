@@ -72,7 +72,7 @@ async fn insert_recipe(
 
 // TODO (oliver): Perhaps unit test the utility functions?
 async fn bulk_insert_ingredients(
-    ingredients: Vec<RecipeIngredient>,
+    ingredients: Vec<CompressedIngredient>,
     recipe_id: i32,
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
 ) -> sqlx::Result<(), AppError> {
@@ -249,7 +249,7 @@ async fn fetch_recipe_from_db(pool: &PgPool, recipe_id: i32) -> Result<Compresse
         (record.name, record.description)
     };
     let ingredients = sqlx::query_as!(
-        RecipeIngredient,
+        CompressedIngredient,
         r#"
             SELECT recipe_id, ingredient_id, unit_id, quantity
             FROM recipe_ingredient

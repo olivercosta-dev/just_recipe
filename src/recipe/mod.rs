@@ -11,28 +11,43 @@ pub struct UncheckedRecipe {
     pub recipe_id: i32,
     pub name: String,
     pub description: String,
-    pub ingredients: Vec<RecipeIngredient>,
+    pub ingredients: Vec<CompressedIngredient>,
     pub steps: Vec<RecipeStep>,
 }
 // TODO (oliver): Make the recipe step always sorted!
+/// It is called CompressedRecipe, because 
+/// it contains reduced information about the recipe.
+/// (Compressed Ingredients)
 #[derive(Serialize, Debug)]
 pub struct CompressedRecipe {
     pub recipe_id: i32,
     pub name: String,
     pub description: String,
-    pub ingredients: Vec<RecipeIngredient>,
+    pub ingredients: Vec<CompressedIngredient>,
     pub steps: Vec<RecipeStep>,
 }
+
 #[derive(Serialize, Deserialize)]
-pub struct DbRecipe {
+pub struct DetailedRecipe {
     pub recipe_id: i32,
     pub name: String,
     pub description: String,
     pub ingredients: Vec<Ingredient>,
     pub steps: Vec<RecipeStep>,
 }
+enum DbRecipe {
+    Detailed(DetailedRecipe),
+    Compressed(CompressedRecipe)
+}
+impl DbRecipe {
+
+}
+/// It is compressed ingredient, as it only contains 
+/// unit_id, ingredient_id, quantity
+/// without any more information. 
+/// (no names for units and ingredients)
 #[derive(Serialize, Deserialize, Debug)]
-pub struct RecipeIngredient {
+pub struct CompressedIngredient {
     #[serde(skip)]
     pub recipe_id: i32, // shouldn't really be used outside of the Recipe
     pub ingredient_id: i32,
@@ -169,7 +184,7 @@ impl From<RecipeParsingError> for AppError {
 mod tests {
     use crate::{
         app::AppError,
-        recipe::{CompressedRecipe, RecipeIngredient, RecipeParsingError, RecipeStep, UncheckedRecipe},
+        recipe::{CompressedRecipe, CompressedIngredient, RecipeParsingError, RecipeStep, UncheckedRecipe},
     };
     // TODO (oliver): There is some refactoring here to be done. Make it cleaner, more general.
     #[test]
@@ -186,7 +201,7 @@ mod tests {
 
         let invalid_unit_id = 100_000;
 
-        let recipe_ingredients = vec![RecipeIngredient {
+        let recipe_ingredients = vec![CompressedIngredient {
             recipe_id: recipe_id,
             unit_id: invalid_unit_id,
             ingredient_id: 1,
@@ -226,7 +241,7 @@ mod tests {
 
         let invalid_ingredient_id = 100_000;
 
-        let recipe_ingredients = vec![RecipeIngredient {
+        let recipe_ingredients = vec![CompressedIngredient {
             recipe_id: recipe_id,
             unit_id: 1,
             ingredient_id: invalid_ingredient_id,

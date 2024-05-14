@@ -7,7 +7,7 @@ use fake::{Fake, Faker};
 use itertools::Itertools;
 use just_recipe::{
     ingredient::Ingredient,
-    recipe::{RecipeIngredient, RecipeStep},
+    recipe::{CompressedIngredient, RecipeStep},
     unit::Unit,
 };
 use serde_json::{json, Value};
@@ -190,10 +190,10 @@ pub async fn assert_recipe_steps_exist(pool: &PgPool, recipe_steps: Vec<Value>, 
 pub fn generate_random_recipe_ingredients(
     units: Vec<Unit>,
     ingredients: Vec<Ingredient>,
-) -> Vec<RecipeIngredient> {
+) -> Vec<CompressedIngredient> {
     let number_of_pairs: i32 = (1..=ingredients.len().try_into().unwrap()).fake::<i32>();
     let mut ingredient_ids: HashSet<i32> = HashSet::new(); // Ingredients must be unique!
-    let mut recipe_ingredients: Vec<RecipeIngredient> = Vec::new();
+    let mut recipe_ingredients: Vec<CompressedIngredient> = Vec::new();
 
     while TryInto::<i32>::try_into(recipe_ingredients.len()).unwrap() != number_of_pairs {
         let random_index = (0..ingredients.len().try_into().unwrap()).fake::<usize>();
@@ -202,7 +202,7 @@ pub fn generate_random_recipe_ingredients(
             .expect("ingredient should have been able to be unwrapped");
         if ingredient_ids.insert(ingr_id) {
             let random_unit_index = (0..units.len().try_into().unwrap()).fake::<usize>();
-            let recipe_ingredient = RecipeIngredient {
+            let recipe_ingredient = CompressedIngredient {
                 recipe_id: 0,
                 ingredient_id: ingr_id,
                 unit_id: units[random_unit_index].unit_id.unwrap(),
@@ -214,7 +214,7 @@ pub fn generate_random_recipe_ingredients(
     recipe_ingredients
 }
 
-pub fn create_recipe_ingredients_json(recipe_ingredients: &[RecipeIngredient]) -> Vec<Value> {
+pub fn create_recipe_ingredients_json(recipe_ingredients: &[CompressedIngredient]) -> Vec<Value> {
     recipe_ingredients
         .iter()
         .map(|rec_ingr| {
