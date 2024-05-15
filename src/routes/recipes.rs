@@ -1,10 +1,13 @@
-use crate::{app::*, recipe::*};
+use core::panic;
+
+use crate::{app::*, ingredient::Ingredient, recipe::*, unit::Unit};
 use axum::{
     extract::{Path, State},
     http::StatusCode,
     response::IntoResponse,
     Json,
 };
+use itertools::Itertools;
 use serde::Deserialize;
 use sqlx::{postgres::PgQueryResult, Error as SqlxError, PgPool};
 
@@ -43,44 +46,53 @@ pub struct RemoveRecipeRequest {
 */
 pub async fn add_recipe(
     State(app_state): State<AppState>,
-    Json(unchecked_recipe): Json<CompactRecipe>,
+    Json(recipe): Json<Recipe<CompactRecipeIngredient, NotBacked>>,
 ) -> Result<StatusCode, AppError> {
-    let recipe: CompactRecipe = unchecked_recipe.try_into()?;
+    let recipe = recipe.validate()?;
     let mut transaction = app_state.pool.begin().await?;
     let recipe_id = insert_recipe(&recipe, &mut transaction).await?;
-    bulk_insert_ingredients(recipe.ingredients, recipe_id, &mut transaction).await?;
-    bulk_insert_steps(recipe.steps, recipe_id, &mut transaction).await?;
+    bulk_insert_ingredients(recipe.ingredients(), recipe_id, &mut transaction).await?;
+    bulk_insert_steps(recipe.steps(), recipe_id, &mut transaction).await?;
     transaction.commit().await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
-async fn insert_recipe(
-    recipe: &CompactRecipe,
+async fn insert_recipe<I: RecipeIngredient, BackedState>(
+    recipe: &Recipe<I, BackedState>,
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
 ) -> Result<i32, AppError> {
     let recipe_query_result = sqlx::query!(
         r#"
             INSERT INTO recipe (name, description) VALUES ($1, $2) RETURNING recipe_id
         "#,
-        recipe.name,
-        recipe.description
+        recipe.name(),
+        recipe.description()
     )
     .fetch_one(&mut **transaction)
     .await?;
     Ok(recipe_query_result.recipe_id)
 }
 
-// TODO (oliver): Perhaps unit test the utility functions?
+// TODO (oliver): Unit test the utility functions
 async fn bulk_insert_ingredients(
-    ingredients: Vec<CompressedIngredient>,
+    ingredients: &[CompactRecipeIngredient],
     recipe_id: i32,
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
 ) -> sqlx::Result<(), AppError> {
-    let ingr_ids: Vec<i32> = ingredients.iter().map(|ingr| ingr.ingredient_id).collect();
-    let unit_ids: Vec<i32> = ingredients.iter().map(|ingr| ingr.unit_id).collect();
+    // OPTIMIZE (oliver): There is lot of cloning and things going on because
+    // OPTIMIZE (oliver): PgArray seems to want ownership. There is probably a solution to this.
+
+    let ingr_ids: Vec<i32> = ingredients
+        .iter()
+        .map(|ingr| ingr.ingredient().to_owned())
+        .collect();
+    let unit_ids: Vec<i32> = ingredients
+        .iter()
+        .map(|ingr| ingr.unit().to_owned())
+        .collect();
     let quants: Vec<String> = ingredients
         .iter()
-        .map(|ingr| ingr.quantity.clone())
+        .map(|ingr| ingr.quantity().to_owned())
         .collect();
     let rec_ids: Vec<i32> = (0..ingr_ids.len()).map(|_| recipe_id).collect();
 
@@ -109,7 +121,7 @@ async fn bulk_insert_ingredients(
 }
 
 async fn bulk_insert_steps(
-    steps: Vec<RecipeStep>,
+    steps: &[RecipeStep],
     recipe_id: i32,
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
 ) -> Result<PgQueryResult, sqlx::Error> {
@@ -152,26 +164,23 @@ pub async fn remove_recipe(
 pub async fn update_recipe(
     State(app_state): State<AppState>,
     Path(recipe_id): Path<i32>,
-    Json(unchecked_recipe): Json<CompactRecipe>,
+    Json(recipe): Json<Recipe<CompactRecipeIngredient, NotBacked>>,
 ) -> Result<StatusCode, AppError> {
-    let recipe: CompactRecipe = CompactRecipe::parse(
-        unchecked_recipe,
-        &app_state.unit_ids,
-        &app_state.ingredient_ids,
-    )?;
+    let recipe: Recipe<CompactRecipeIngredient, Backed> =
+        recipe.to_backed(&app_state.unit_ids, &app_state.ingredient_ids)?;
     let mut transaction = app_state.pool.begin().await?;
     update_recipe_record(&recipe, recipe_id, &mut transaction).await?;
 
     delete_recipe_ingredients(recipe_id, &app_state).await?;
     delete_recipe_steps(recipe_id, &app_state).await?;
-    bulk_insert_ingredients(recipe.ingredients, recipe_id, &mut transaction).await?;
-    bulk_insert_steps(recipe.steps, recipe_id, &mut transaction).await?;
+    bulk_insert_ingredients(recipe.ingredients(), recipe_id, &mut transaction).await?;
+    bulk_insert_steps(recipe.steps(), recipe_id, &mut transaction).await?;
     transaction.commit().await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
-async fn update_recipe_record(
-    recipe: &CompactRecipe,
+async fn update_recipe_record<I: RecipeIngredient>(
+    recipe: &Recipe<I, Backed>,
     recipe_id: i32,
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
 ) -> Result<(), AppError> {
@@ -181,8 +190,8 @@ async fn update_recipe_record(
             SET name = $1, description = $2 
             WHERE recipe_id = $3 AND (name IS DISTINCT FROM $1 OR description IS DISTINCT FROM $2)
         "#,
-        recipe.name,
-        recipe.description,
+        recipe.name(),
+        recipe.description(),
         recipe_id
     )
     .execute(&mut **transaction)
@@ -225,14 +234,16 @@ pub async fn get_recipe(
     Path(recipe_id): Path<i32>,
 ) -> Result<impl IntoResponse, AppError> {
     let recipe = fetch_recipe_from_db(&app_state.pool, recipe_id).await?;
-    let detailed = CompactRecipe::parse_detailed(recipe, &app_state.pool).await?; 
-    Ok(Json(detailed))
+    // let detailed = CompactRecipe::parse_detailed(recipe, &app_state.pool).await?;
+    Ok(Json(recipe))
 }
-
-async fn fetch_recipe_from_db(pool: &PgPool, recipe_id: i32) -> Result<CompactRecipe, AppError> {
+// TODO (oliver): Make this general so that even non-detailed recipes can be fetched!
+async fn fetch_recipe_from_db(
+    pool: &PgPool,
+    recipe_id: i32,
+) -> Result<Recipe<DetailedRecipeIngredient, Backed>, AppError> {
     let (name, description) = {
-        
-        let optional_record = sqlx::query!(
+        let record = sqlx::query!(
             r#"
             SELECT name, description
             FROM recipe
@@ -242,23 +253,51 @@ async fn fetch_recipe_from_db(pool: &PgPool, recipe_id: i32) -> Result<CompactRe
         )
         .fetch_optional(pool)
         .await?;
-        if optional_record.is_none() {
+        if record.is_none() {
             return Err(AppError::NotFound);
         }
-        let record = optional_record.unwrap();
+        let record = record.unwrap();
         (record.name, record.description)
     };
-    let ingredients = sqlx::query_as!(
-        CompressedIngredient,
+    let recipe_ingredient_records = sqlx::query!(
         r#"
-            SELECT recipe_id, ingredient_id, unit_id, quantity
-            FROM recipe_ingredient
+            SELECT 
+                i.ingredient_id, 
+                i.singular_name,
+                i.plural_name,
+                u.unit_id,
+                u.singular_name as unit_singular,
+                u.plural_name as unit_plural,
+                quantity
+            FROM recipe_ingredient ri
+            LEFT JOIN ingredient i
+            ON ri.ingredient_id = i.ingredient_id
+            LEFT JOIN unit u
+            ON ri.unit_id = u.unit_id
             WHERE recipe_id = $1
         "#,
         recipe_id
     )
     .fetch_all(pool)
     .await?;
+
+    let mut detailed_ingredients: Vec<DetailedRecipeIngredient> = Vec::new();
+
+    for record in recipe_ingredient_records {
+        let ingredient = Ingredient {
+            ingredient_id: Some(record.ingredient_id),
+            singular_name: record.singular_name,
+            plural_name: record.plural_name,
+        };
+        let unit = Unit {
+            unit_id: Some(record.unit_id),
+            singular_name: record.unit_singular,
+            plural_name: record.unit_plural,
+        };
+        let detailed_ingredient =
+            DetailedRecipeIngredient::new(recipe_id, ingredient, unit, record.quantity);
+        detailed_ingredients.push(detailed_ingredient);
+    }
     let steps = sqlx::query_as!(
         RecipeStep,
         r#"
@@ -271,11 +310,6 @@ async fn fetch_recipe_from_db(pool: &PgPool, recipe_id: i32) -> Result<CompactRe
     )
     .fetch_all(pool)
     .await?;
-    Ok(CompactRecipe {
-        recipe_id,
-        name,
-        description,
-        ingredients,
-        steps,
-    })
+    let recipe = Recipe::new(recipe_id, name, description, detailed_ingredients, steps);
+    Ok(recipe)
 }

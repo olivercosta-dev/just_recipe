@@ -4,10 +4,7 @@ use axum::{body::to_bytes, http::StatusCode};
 use fake::{Fake, Faker};
 use itertools::Itertools;
 use just_recipe::{
-    app::{new_app, AppState},
-    ingredient::Ingredient,
-    recipe::{DbRecipe, CompactRecipe},
-    unit::Unit,
+    app::{new_app, AppState}, ingredient::Ingredient, recipe::{DetailedRecipeIngredient, Recipe, RecipeIngredient}, unit::Unit
 };
 
 mod utils;
@@ -25,11 +22,11 @@ async fn adding_new_recipe_persists_and_returns_204_no_content(pool: PgPool) -> 
     let description = Faker.fake::<String>();
 
     let recipe_steps = create_recipe_steps_json_for_request(generate_random_number_of_steps());
-
     let (all_ingredients, all_units) = fetch_ingredients_and_units(&app_state.pool).await;
     let recipe_ingredients: Vec<Value> = create_recipe_ingredients_json(
         &generate_random_recipe_ingredients(all_units, all_ingredients),
     );
+    println!("{:?}", recipe_ingredients);
 
     let json = json!(
         {
@@ -39,12 +36,12 @@ async fn adding_new_recipe_persists_and_returns_204_no_content(pool: PgPool) -> 
             "steps": recipe_steps
         }
     );
+    println!("{:?}", &json);
     let request = create_post_request_to("recipes", json);
     let response = app
         .oneshot(request)
         .await
         .expect("Should have gotten a valid response.");
-
     assert_eq!(response.status(), StatusCode::NO_CONTENT);
 
     let recipe_id = assert_recipe_exists(&app_state.pool, &recipe_name, &description).await;
@@ -354,10 +351,7 @@ async fn updating_recipe_with_non_existent_ingredient_id_returns_422_unproccessa
         singular_name: Faker.fake::<String>(),
         plural_name: Faker.fake::<String>(),
     }];
-    println!("Units: {:?}", &units);
-    println!("Ingredients: {:?}", &ingredients);
     let recipe_ing = generate_random_recipe_ingredients(units, ingredients);
-    println!("Recipe_ingredients: {:?}", &recipe_ing);
     let recipe_ingredients = create_recipe_ingredients_json(&recipe_ing);
     let recipe_steps = create_recipe_steps_json_for_request(generate_random_number_of_steps());
     let json = json!({
@@ -387,23 +381,27 @@ async fn getting_existing_recipe_returns_recipe_and_200_ok(pool: PgPool) -> sqlx
         .await
         .expect("Failed to read body bytes");
     
-    let response_recipe: DbRecipe =
+    let response_recipe: Recipe<DetailedRecipeIngredient> =
         serde_json::from_slice(&bytes).expect("Failed to deserialize JSON");
 
     let recipe_id_in_db = assert_recipe_exists(
         &app_state.pool,
-        &response_recipe.name,
-        &response_recipe.description,
+        response_recipe.name(),
+        response_recipe.description(),
     )
     .await;
-    assert_eq!(response_recipe.recipe_id, recipe_id_in_db);
+    assert_eq!(response_recipe.recipe_id().expect("recipe_id should have existed"), &recipe_id_in_db);
+    
     assert_recipe_steps_exist(
         &app_state.pool,
-        response_recipe.steps.iter().map(|f| json!(f)).collect_vec(),
+        response_recipe.steps().iter().map(|f| json!(f)).collect_vec(),
         recipe_id,
     )
     .await;
-    assert_detailed_recipe_ingredients_exist(&app_state.pool, response_recipe.ingredients).await;
+    assert_detailed_recipe_ingredients_exist(
+        &app_state.pool, 
+        response_recipe.ingredients().iter().map(|ing| ing.ingredient()).collect()
+    ).await;
     Ok(())
 }
 
