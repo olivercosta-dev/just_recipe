@@ -2,9 +2,7 @@ use super::state::AppState;
 use crate::{
     fetch_all_ingredient_ids, fetch_all_unit_ids,
     routes::{
-        add_ingredient, add_recipe, add_unit, get_ingredient, get_recipe, get_unit, health_check,
-        remove_ingredient, remove_recipe, remove_unit, update_ingredient, update_recipe,
-        update_unit,
+        add_ingredient, add_recipe, add_unit, get_ingredient_by_id, get_ingredients_by_query, get_recipe, get_unit, health_check, remove_ingredient, remove_recipe, remove_unit, update_ingredient, update_recipe, update_unit
     },
 };
 use axum::{
@@ -54,11 +52,13 @@ impl App {
             .route("/units/:unit_id", put(update_unit).get(get_unit))
             .route(
                 "/ingredients",
-                post(add_ingredient).delete(remove_ingredient),
+                post(add_ingredient)
+                    .delete(remove_ingredient)
+                    .get(get_ingredients_by_query),
             )
             .route(
                 "/ingredients/:ingredient_id",
-                put(update_ingredient).get(get_ingredient),
+                put(update_ingredient).get(get_ingredient_by_id),
             )
             .route("/recipes", post(add_recipe).delete(remove_recipe))
             .route("/recipes/:recipe_id", put(update_recipe).get(get_recipe))
@@ -102,7 +102,7 @@ mod test {
         }
         Ok(())
     }
-    
+
     #[sqlx::test(fixtures(path = "../../tests/fixtures", scripts("units")))]
     async fn fetches_all_units(pool: PgPool) -> sqlx::Result<()> {
         let fetched_unit_ids = fetch_all_unit_ids(&pool)
@@ -119,5 +119,4 @@ mod test {
         }
         Ok(())
     }
-    
 }

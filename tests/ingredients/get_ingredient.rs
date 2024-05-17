@@ -1,8 +1,14 @@
 use std::default;
 
-use axum::{body::to_bytes, http::StatusCode};
+use axum::{
+    body::to_bytes,
+    http::{request, StatusCode},
+};
 use fake::{Fake, Faker};
-use just_recipe::{application::{app::App, state::AppState}, ingredient::Ingredient, unit::Unit};
+use just_recipe::{
+    application::{app::App, state::AppState}, ingredient::Ingredient, recipe::recipe_ingredient::DetailedRecipeIngredient, routes::GetIngredientsResponse, unit::Unit
+};
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sqlx::PgPool;
 use tower::ServiceExt;
@@ -16,7 +22,7 @@ async fn getting_existing_ingredient_returns_ingredient_and_200_ok(
     let app = App::new(app_state.clone(), default::Default::default(), 0).await;
     let ingredient = choose_random_ingredient(&app_state.pool).await;
     let json = json!({}); // this is not needed for a get
-    let request = create_get_request_to("ingredients", ingredient.ingredient_id.unwrap(), json);
+    let request = create_get_request_to("ingredients", Some(ingredient.ingredient_id.unwrap()), None, json);
     let response = app.router.oneshot(request).await.unwrap();
 
     assert_eq!(response.status(), StatusCode::OK);
@@ -34,14 +40,100 @@ async fn getting_existing_ingredient_returns_ingredient_and_200_ok(
     Ok(())
 }
 #[sqlx::test(fixtures(path = "../fixtures", scripts("ingredients")))]
-async fn getting_non_existent_ingredient_returns_404_not_found(
-    pool: PgPool,
-) -> sqlx::Result<()> {
+async fn getting_non_existent_ingredient_returns_404_not_found(pool: PgPool) -> sqlx::Result<()> {
     let app_state = AppState::new(pool);
     let app = App::new(app_state.clone(), default::Default::default(), 0).await;
     let json = json!({}); // won't be needing this
-    let request = create_get_request_to("ingredients", -1, json);
+    let request = create_get_request_to("ingredients", Some(-1), None, json);
     let response = app.router.oneshot(request).await.unwrap();
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
     Ok(())
+}
+// TODO (oliver): Refactor
+// The desired behavior:
+// 1.) Sending a GET request to /ingredients returns
+//     a.) List of n (0 <= n <= 15) ingredients (sorted by id)
+//     b.) An endpoint to the next n ingredients
+//     c.) 200 OK
+//     d.) Query Params: limit and start_from
+// 2.) The response JSON Format,
+//     for request at /ingredients
+//     (the default limit is 15)
+// {
+//   ingredients: [
+//      {
+//        ingredient_id: 1,
+//        singular_name: "Apple"
+//        plural_name: "Apples"
+//      },
+//      ...
+//   ]
+//   next: "start_from=5&limit=15"
+// }
+#[sqlx::test(fixtures(path = "../fixtures", scripts("ingredients")))]
+async fn getting_ingredients_returns_ingredients_200_ok(pool: PgPool) -> sqlx::Result<()> {
+    let app_state = AppState::new(pool);
+    let app = App::new(app_state.clone(), default::Default::default(), 0).await;
+    let json = json!({});
+    let limit: i64 = 5;
+    let query_params = Some(format!("limit={}", limit));
+    let request = create_get_request_to("ingredients", None, query_params, json);
+    let response = app.router.oneshot(request).await.unwrap();
+
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let bytes = to_bytes(response.into_body(), usize::MAX)
+        .await
+        .expect("Failed to read body bytes");
+
+    let response_ingredients: GetIngredientsResponse =
+        serde_json::from_slice(&bytes).expect("Failed to deserialize JSON");
+    
+    assert_eq!(response_ingredients.ingredients.len() as i64, limit);
+
+    let ingredients_in_db = sqlx::query_as!(
+        Ingredient,
+        r#"
+            SELECT *
+            FROM ingredient
+            ORDER BY ingredient_id
+            LIMIT $1
+        "#,
+        limit
+    )
+    .fetch_all(&app_state.pool)
+    .await
+    .unwrap();
+    assert_eq!(response_ingredients.ingredients.len(), ingredients_in_db.len());
+    assert_ingredients_match(&response_ingredients.ingredients, &ingredients_in_db);
+    Ok(())
+}
+
+fn assert_ingredients_match(left_ingredients: &[Ingredient], right_ingredients: &[Ingredient]) {
+    // Ensure both ingredient slices are sorted by ingredient_id
+    let mut left_sorted = left_ingredients.to_vec();
+    let mut right_sorted = right_ingredients.to_vec();
+
+    left_sorted.sort_by_key(|ingredient| ingredient.ingredient_id);
+    right_sorted.sort_by_key(|ingredient| ingredient.ingredient_id);
+
+    assert_eq!(left_sorted.len(), right_sorted.len(), "The number of ingredients does not match.");
+
+    for (left, right) in left_sorted.iter().zip(right_sorted.iter()) {
+        assert_eq!(
+            left.ingredient_id, right.ingredient_id,
+            "Ingredient ID mismatch: left = {:?}, right = {:?}",
+            left, right
+        );
+        assert_eq!(
+            left.singular_name, right.singular_name,
+            "Singular name mismatch: left = {:?}, right = {:?}",
+            left, right
+        );
+        assert_eq!(
+            left.plural_name, right.plural_name,
+            "Plural name mismatch: left = {:?}, right = {:?}",
+            left, right
+        );
+    }
 }

@@ -15,7 +15,7 @@ async fn getting_existing_recipe_returns_recipe_and_200_ok(pool: PgPool) -> sqlx
     let app_state = AppState::new(pool);
     let app = App::new(app_state.clone(), default::Default::default(), 0).await;
     let recipe_id = choose_random_recipe_id(&app_state.pool).await;
-    let request = create_get_request_to("recipes", recipe_id, json!({}));
+    let request = create_get_request_to("recipes", Some(recipe_id), None, json!({}));
     let response = app.router.oneshot(request).await.unwrap();
 
     assert_eq!(response.status(), StatusCode::OK);
@@ -67,7 +67,7 @@ async fn getting_non_existent_recipe_returns_404_not_found(pool: PgPool) -> sqlx
     let app_state = AppState::new(pool);
     let app = App::new(app_state.clone(), default::Default::default(), 0).await;
     let recipe_id = -1;
-    let request = create_get_request_to("recipes", recipe_id, json!({}));
+    let request = create_get_request_to("recipes", Some(recipe_id),None, json!({}));
     let response = app.router.oneshot(request).await.unwrap();
 
     assert_eq!(response.status(), StatusCode::NOT_FOUND);

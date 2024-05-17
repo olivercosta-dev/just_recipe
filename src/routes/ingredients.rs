@@ -1,10 +1,13 @@
+use std::fmt::format;
+
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
     Json,
 };
 use serde::{Deserialize, Serialize};
+use serde_json::json;
 use sqlx::{query, PgPool};
 
 use crate::{
@@ -105,13 +108,14 @@ async fn insert_ingredient_record(
     }
 }
 
-pub async fn get_ingredient(
+pub async fn get_ingredient_by_id(
     State(app_state): State<AppState>,
     Path(ingredient_id): Path<i32>,
 ) -> Result<impl IntoResponse, AppError> {
     let ingredient = fetch_ingredient_from_db(&app_state.pool, ingredient_id).await?;
     Ok(Json(ingredient))
 }
+
 async fn fetch_ingredient_from_db(
     pool: &PgPool,
     ingredient_id: i32,
@@ -129,4 +133,70 @@ async fn fetch_ingredient_from_db(
     .await?
     .ok_or(AppError::NotFound)?;
     Ok(ingredient)
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct GetIngredientsResponse {
+    pub ingredients: Vec<Ingredient>,
+    // The last ingredient_id that was included.
+    // It is none if there are no more ingredients for the query.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub last_ingredient_id: Option<i32>,
+}
+#[derive(Serialize, Deserialize)]
+pub struct IngredientsQuery {
+    limit: i64,
+    // #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
+    start_id: i32,
+}
+pub async fn get_ingredients_by_query(
+    State(app_state): State<AppState>,
+    query: Query<IngredientsQuery>,
+) -> Result<impl IntoResponse, AppError> {
+    let ingredients = fetch_ingredients_from_db(&query, &app_state.pool).await?;
+    let last_ingredient_id: Option<i32> = match (ingredients.first(), ingredients.last()) {
+        (Some(first), Some(last))
+            if first.ingredient_id != last.ingredient_id
+                // We are casting length upwards so that it is not lossy.
+                && (ingredients.len() as i64) < query.limit =>
+        {
+            last.ingredient_id
+        }
+        (_, _) => None,
+    };
+    let response = GetIngredientsResponse {
+        ingredients,
+        last_ingredient_id,
+    };
+    Ok(Json(response))
+}
+
+async fn fetch_ingredients_from_db(
+    query: &Query<IngredientsQuery>,
+    pool: &PgPool,
+) -> Result<Vec<Ingredient>, AppError> {
+    
+    // let start_id = match query.start_id {
+    //     Some(id) => id,
+    //     None => 0,
+    // };
+
+    let result = sqlx::query_as!(
+        Ingredient,
+        r#" SELECT * 
+            FROM ingredient
+            WHERE ingredient_id >= $1
+            ORDER BY ingredient_id
+            LIMIT $2
+        "#,
+        query.start_id,
+        query.limit,
+    )
+    .fetch_all(pool)
+    .await?;
+    if result.len() == 0 {
+        panic!("FUCK");
+    }
+    Ok(result)
 }

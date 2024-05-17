@@ -51,12 +51,26 @@ pub fn create_put_request_to(
 
 pub fn create_get_request_to(
     endpoint: &str,
-    resource_id: i32,
+    resource_id: Option<i32>,
+    query_params: Option<String>,
     json: serde_json::Value,
 ) -> Request<Body> {
+    let resource;
+    
+    if resource_id.is_none() {
+        resource = String::from("");
+    } else {
+        resource = format!("/{}", resource_id.unwrap());
+    }
+    let query;
+    if query_params.is_some(){
+        query = "?".to_owned() + &query_params.unwrap();
+    } else {
+        query = String::from("");
+    }
     Request::builder()
         .method("GET")
-        .uri(format!("/{}/{}", endpoint, resource_id))
+        .uri(format!("/{}{}{}", endpoint, resource, query))
         .body(Body::from(serde_json::to_vec(&json).unwrap()))
         .unwrap()
 }

@@ -14,7 +14,7 @@ async fn getting_existing_unit_returns_ingredient_and_200_ok(pool: PgPool) -> sq
     let app = App::new(app_state.clone(), default::Default::default(), 0).await;
     let unit = choose_random_unit(&app_state.pool).await;
     let json = json!({}); // this is not needed for a get
-    let request = create_get_request_to("units", unit.unit_id.unwrap(), json);
+    let request = create_get_request_to("units", Some(unit.unit_id.unwrap()),None, json);
     let response = app.router.oneshot(request).await.unwrap();
 
     assert_eq!(response.status(), StatusCode::OK);
@@ -35,7 +35,7 @@ async fn getting_non_existent_unit_returns_404_not_found(pool: PgPool) -> sqlx::
     let app_state = AppState::new(pool);
     let app = App::new(app_state.clone(), default::Default::default(), 0).await;
     let json = json!({}); // won't be needing this
-    let request = create_get_request_to("units", -1, json);
+    let request = create_get_request_to("units", Some(-1),None, json);
     let response = app.router.oneshot(request).await.unwrap();
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
     Ok(())

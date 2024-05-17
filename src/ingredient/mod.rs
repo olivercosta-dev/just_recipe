@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Ingredient {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ingredient_id: Option<i32>,
