@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::{query, PgPool};
 
 use crate::{
-    app::{AppError, AppState},
+    application::{error::AppError, state::AppState},
     ingredient::Ingredient,
 };
 

@@ -1,11 +1,14 @@
 use axum::{
-    extract::{Path, State}, http::StatusCode, response::IntoResponse, Json
+    extract::{Path, State},
+    http::StatusCode,
+    response::IntoResponse,
+    Json,
 };
 use serde::{Deserialize, Serialize};
 use sqlx::{query, PgPool};
 
 use crate::{
-    app::{AppError, AppState},
+    application::{error::AppError, state::AppState},
     unit::Unit,
 };
 
@@ -57,12 +60,9 @@ pub async fn remove_unit(
     Ok(StatusCode::NO_CONTENT)
 }
 async fn delete_unit_from_db(unit_id: &i32, pool: &PgPool) -> Result<(), AppError> {
-    let result = sqlx::query!(
-        "DELETE FROM unit WHERE unit_id = $1",
-        unit_id
-    )
-    .execute(pool)
-    .await?;
+    let result = sqlx::query!("DELETE FROM unit WHERE unit_id = $1", unit_id)
+        .execute(pool)
+        .await?;
     if result.rows_affected() == 0 {
         return Err(AppError::NotFound);
     }
@@ -101,10 +101,7 @@ pub async fn get_unit(
     let unit = fetch_unit_from_db(&app_state.pool, unit_id).await?;
     Ok(Json(unit))
 }
-async fn fetch_unit_from_db(
-    pool: &PgPool,
-    unit_id: i32,
-) -> Result<Unit, AppError> {
+async fn fetch_unit_from_db(pool: &PgPool, unit_id: i32) -> Result<Unit, AppError> {
     let unit = sqlx::query_as!(
         Unit,
         r#"

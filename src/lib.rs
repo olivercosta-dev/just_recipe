@@ -1,7 +1,7 @@
 use dashmap::DashSet;
 use sqlx::PgPool;
 
-pub mod app;
+pub mod application;
 pub mod ingredient;
 pub mod recipe;
 pub mod routes;

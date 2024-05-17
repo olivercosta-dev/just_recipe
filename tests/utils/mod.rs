@@ -7,7 +7,10 @@ use fake::{Fake, Faker};
 use itertools::Itertools;
 use just_recipe::{
     ingredient::Ingredient,
-    recipe::{CompactRecipeIngredient, RecipeIngredient, RecipeStep},
+    recipe::{
+        recipe_ingredient::{CompactRecipeIngredient, RecipeIngredient},
+        recipe_step::RecipeStep,
+    },
     unit::Unit,
 };
 use serde_json::{json, Value};
@@ -214,7 +217,9 @@ pub fn generate_random_recipe_ingredients(
     recipe_ingredients
 }
 
-pub fn create_recipe_ingredients_json(recipe_ingredients: &[CompactRecipeIngredient]) -> Vec<Value> {
+pub fn create_recipe_ingredients_json(
+    recipe_ingredients: &[CompactRecipeIngredient],
+) -> Vec<Value> {
     recipe_ingredients
         .iter()
         .map(|rec_ingr| {
@@ -276,7 +281,10 @@ pub async fn choose_random_recipe_id(pool: &PgPool) -> i32 {
     recipes[random_index].recipe_id
 }
 
-pub async fn assert_detailed_recipe_ingredients_exist(pool: &PgPool, ingredients: Vec<&Ingredient>) {
+pub async fn assert_detailed_recipe_ingredients_exist(
+    pool: &PgPool,
+    ingredients: Vec<&Ingredient>,
+) {
     let ingr_ids = ingredients
         .iter()
         .map(|ingr| ingr.ingredient_id.unwrap())
@@ -320,5 +328,3 @@ mod tests {
         assert!(recipe_ingredients.len() > 0);
     }
 }
-
-
