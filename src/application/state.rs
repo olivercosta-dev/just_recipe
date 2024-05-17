@@ -2,7 +2,8 @@ use dashmap::DashSet;
 use sqlx::PgPool;
 
 
-// OPTIMIZE (oliver): Encapsulation could be better here.
+// OPTIMIZE (oliver): Encapsulation could be better here. 
+//  Attributes shouldn't be public!
 #[derive(Clone)]
 pub struct AppState {
     pub pool: PgPool,
