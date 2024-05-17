@@ -1,4 +1,6 @@
-#![allow(dead_code)]
+mod ingredients;
+mod recipes;
+mod units;
 
 use std::collections::HashSet;
 
