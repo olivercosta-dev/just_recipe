@@ -49,7 +49,7 @@ async fn getting_non_existent_ingredient_returns_404_not_found(pool: PgPool) -> 
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
     Ok(())
 }
-// TODO (oliver): Refactor
+// TODO (oliver): Refactor this! Test the query parameters too, and errors too!
 // The desired behavior:
 // 1.) Sending a GET request to /ingredients returns
 //     a.) List of n (0 <= n <= 15) ingredients (sorted by id)
