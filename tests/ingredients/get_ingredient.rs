@@ -2,13 +2,14 @@ use std::default;
 
 use axum::{
     body::to_bytes,
-    http::{request, StatusCode},
+    http::StatusCode,
 };
-use fake::{Fake, Faker};
+use fake::Fake;
 use just_recipe::{
-    application::{app::App, state::AppState}, ingredient::Ingredient, recipe::recipe_ingredient::DetailedRecipeIngredient, routes::GetIngredientsResponse, unit::Unit
+    application::{app::App, state::AppState},
+    ingredient::Ingredient,
+    routes::GetIngredientsResponse,
 };
-use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sqlx::PgPool;
 use tower::ServiceExt;
@@ -22,7 +23,12 @@ async fn getting_existing_ingredient_returns_ingredient_and_200_ok(
     let app = App::new(app_state.clone(), default::Default::default(), 0).await;
     let ingredient = choose_random_ingredient(&app_state.pool).await;
     let json = json!({}); // this is not needed for a get
-    let request = create_get_request_to("ingredients", Some(ingredient.ingredient_id.unwrap()), None, json);
+    let request = create_get_request_to(
+        "ingredients",
+        Some(ingredient.ingredient_id.unwrap()),
+        None,
+        json,
+    );
     let response = app.router.oneshot(request).await.unwrap();
 
     assert_eq!(response.status(), StatusCode::OK);
@@ -70,42 +76,66 @@ async fn getting_non_existent_ingredient_returns_404_not_found(pool: PgPool) -> 
 //   ]
 //   next: "start_from=5&limit=15"
 // }
+
 #[sqlx::test(fixtures(path = "../fixtures", scripts("ingredients")))]
 async fn getting_ingredients_returns_ingredients_200_ok(pool: PgPool) -> sqlx::Result<()> {
     let app_state = AppState::new(pool);
     let app = App::new(app_state.clone(), default::Default::default(), 0).await;
-    let json = json!({});
-    let limit: i64 = 5;
-    let query_params = Some(format!("limit={}", limit));
-    let request = create_get_request_to("ingredients", None, query_params, json);
-    let response = app.router.oneshot(request).await.unwrap();
+    let limit: i64 = (1..=15).fake();
+    let mut start_from: Option<i32> = None;
+    loop 
+    {
+        let mut query_string = format!("limit={}", limit);
+        if let Some(start_id) = start_from {
+            query_string = format!("{}&start_from={}", query_string, start_id);
+        }
+        let query_params = Some(query_string);
+        let json = json!({});
+        let request = create_get_request_to("ingredients", None, query_params, json);
+        let response = app.router.clone().oneshot(request).await.unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
 
-    assert_eq!(response.status(), StatusCode::OK);
+        let bytes = to_bytes(response.into_body(), usize::MAX)
+            .await
+            .expect("Failed to read body bytes");
 
-    let bytes = to_bytes(response.into_body(), usize::MAX)
+        let response_ingredients: GetIngredientsResponse =
+            serde_json::from_slice(&bytes).expect("Failed to deserialize JSON");
+
+        assert!(response_ingredients.ingredients.len() as i64 <= limit);
+        let start_id = if let Some(start_id) = start_from {
+            start_id
+        } else {
+            -1
+        };
+        let ingredients_in_db = sqlx::query_as!(
+            Ingredient,
+            r#" 
+                SELECT * 
+                FROM ingredient
+                WHERE ingredient_id >= $1
+                ORDER BY ingredient_id
+                LIMIT $2
+            "#,
+            start_id,
+            limit
+        )
+        .fetch_all(&app_state.pool)
         .await
-        .expect("Failed to read body bytes");
+        .unwrap();
+        assert_eq!(
+            response_ingredients.ingredients.len(),
+            ingredients_in_db.len()
+        );
 
-    let response_ingredients: GetIngredientsResponse =
-        serde_json::from_slice(&bytes).expect("Failed to deserialize JSON");
-    
-    assert_eq!(response_ingredients.ingredients.len() as i64, limit);
+        assert_ingredients_match(&response_ingredients.ingredients, &ingredients_in_db);
+        if response_ingredients.next_start_from.is_none(){
+            break;
+        } else {
+            start_from = response_ingredients.next_start_from;
+        }
+    }
 
-    let ingredients_in_db = sqlx::query_as!(
-        Ingredient,
-        r#"
-            SELECT *
-            FROM ingredient
-            ORDER BY ingredient_id
-            LIMIT $1
-        "#,
-        limit
-    )
-    .fetch_all(&app_state.pool)
-    .await
-    .unwrap();
-    assert_eq!(response_ingredients.ingredients.len(), ingredients_in_db.len());
-    assert_ingredients_match(&response_ingredients.ingredients, &ingredients_in_db);
     Ok(())
 }
 
@@ -117,7 +147,11 @@ fn assert_ingredients_match(left_ingredients: &[Ingredient], right_ingredients: 
     left_sorted.sort_by_key(|ingredient| ingredient.ingredient_id);
     right_sorted.sort_by_key(|ingredient| ingredient.ingredient_id);
 
-    assert_eq!(left_sorted.len(), right_sorted.len(), "The number of ingredients does not match.");
+    assert_eq!(
+        left_sorted.len(),
+        right_sorted.len(),
+        "The number of ingredients does not match."
+    );
 
     for (left, right) in left_sorted.iter().zip(right_sorted.iter()) {
         assert_eq!(

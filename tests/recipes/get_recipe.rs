@@ -1,16 +1,27 @@
 use std::default;
 
 use axum::{body::to_bytes, http::StatusCode};
-use fake::{Fake, Faker};
 use itertools::Itertools;
-use just_recipe::{application::{app::App, state::AppState}, recipe::{recipe::Recipe, recipe_ingredient::{DetailedRecipeIngredient, RecipeIngredient}}, unit::Unit};
+use just_recipe::{
+    application::{app::App, state::AppState},
+    recipe::{
+        recipe::Recipe,
+        recipe_ingredient::{DetailedRecipeIngredient, RecipeIngredient},
+    }
+};
 use serde_json::json;
 use sqlx::PgPool;
 use tower::ServiceExt;
 
-use crate::{assert_detailed_recipe_ingredients_exist, assert_recipe_exists, assert_recipe_steps_exist, choose_random_recipe_id, create_get_request_to};
+use crate::{
+    assert_detailed_recipe_ingredients_exist, assert_recipe_exists, assert_recipe_steps_exist,
+    choose_random_recipe_id, create_get_request_to,
+};
 
-#[sqlx::test(fixtures(path = "../fixtures", scripts("units", "ingredients", "recipes", "recipe_ingredients", "steps")))]
+#[sqlx::test(fixtures(
+    path = "../fixtures",
+    scripts("units", "ingredients", "recipes", "recipe_ingredients", "steps")
+))]
 async fn getting_existing_recipe_returns_recipe_and_200_ok(pool: PgPool) -> sqlx::Result<()> {
     let app_state = AppState::new(pool);
     let app = App::new(app_state.clone(), default::Default::default(), 0).await;
@@ -62,12 +73,15 @@ async fn getting_existing_recipe_returns_recipe_and_200_ok(pool: PgPool) -> sqlx
     Ok(())
 }
 
-#[sqlx::test(fixtures(path = "../fixtures", scripts("units", "ingredients", "recipes", "recipe_ingredients", "steps")))]
+#[sqlx::test(fixtures(
+    path = "../fixtures",
+    scripts("units", "ingredients", "recipes", "recipe_ingredients", "steps")
+))]
 async fn getting_non_existent_recipe_returns_404_not_found(pool: PgPool) -> sqlx::Result<()> {
     let app_state = AppState::new(pool);
     let app = App::new(app_state.clone(), default::Default::default(), 0).await;
     let recipe_id = -1;
-    let request = create_get_request_to("recipes", Some(recipe_id),None, json!({}));
+    let request = create_get_request_to("recipes", Some(recipe_id), None, json!({}));
     let response = app.router.oneshot(request).await.unwrap();
 
     assert_eq!(response.status(), StatusCode::NOT_FOUND);

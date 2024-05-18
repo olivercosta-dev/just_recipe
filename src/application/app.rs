@@ -11,6 +11,7 @@ use axum::{
 };
 use tower_http::catch_panic::CatchPanicLayer;
 
+#[derive(Clone)]
 pub struct App {
     url: String,
     port: i32,
@@ -76,6 +77,7 @@ impl App {
     }
 }
 
+#[allow(unused)]
 mod test {
     use std::{default, sync::Arc};
 

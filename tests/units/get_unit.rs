@@ -1,7 +1,6 @@
 use std::default;
 
 use axum::{body::to_bytes, http::StatusCode};
-use fake::{Fake, Faker};
 use just_recipe::{application::{app::App, state::AppState}, unit::Unit};
 use serde_json::json;
 use sqlx::PgPool;

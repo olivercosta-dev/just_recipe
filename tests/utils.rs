@@ -1,6 +1,7 @@
-mod ingredients;
-mod recipes;
-mod units;
+pub mod ingredients;
+pub mod recipes;
+pub mod units;
+
 
 use std::collections::HashSet;
 

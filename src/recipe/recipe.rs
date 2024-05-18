@@ -150,7 +150,7 @@ impl Recipe<DetailedRecipeIngredient, NotBacked> {
                     RecipeParsingError::InvalidIngredientId,
                 ));
             }
-            let res = sqlx::query!(
+            let _ = sqlx::query!(
                 r#"
                     SELECT *
                     FROM ingredient
@@ -173,7 +173,7 @@ impl Recipe<DetailedRecipeIngredient, NotBacked> {
                     RecipeParsingError::InvalidUnitId,
                 ));
             }
-            let res = sqlx::query!(
+            let _ = sqlx::query!(
                 r#"
                     SELECT *
                     FROM unit

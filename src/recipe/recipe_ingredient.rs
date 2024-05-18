@@ -12,7 +12,8 @@ pub trait RecipeIngredient {
     fn unit(&self) -> &Self::UnitType;
     fn quantity(&self) -> &str;
 }
-
+// This is so recipe_id doesn't get flagged
+#[allow(dead_code)]
 #[derive(Serialize, Deserialize)]
 pub struct CompactRecipeIngredient {
     #[serde(skip)]
@@ -21,6 +22,8 @@ pub struct CompactRecipeIngredient {
     pub(crate) ingredient_id: i32,
     pub(crate) quantity: String,
 }
+// This is so recipe_id doesn't get flagged
+#[allow(dead_code)] 
 #[derive(Serialize, Deserialize)]
 pub struct DetailedRecipeIngredient {
     #[serde(skip)]

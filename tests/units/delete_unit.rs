@@ -1,8 +1,7 @@
 use std::default;
 
 use axum::http::StatusCode;
-use fake::{Fake, Faker};
-use just_recipe::{application::{app::App, state::AppState}, unit::Unit};
+use just_recipe::application::{app::App, state::AppState};
 use serde_json::json;
 use sqlx::PgPool;
 use tower::ServiceExt;

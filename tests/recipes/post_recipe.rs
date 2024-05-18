@@ -2,7 +2,7 @@ use std::default;
 
 use axum::http::StatusCode;
 use fake::{Fake, Faker};
-use just_recipe::{application::{app::App, state::AppState}, unit::Unit};
+use just_recipe::application::{app::App, state::AppState};
 use serde_json::{json, Value};
 use sqlx::PgPool;
 use tower::ServiceExt;
@@ -21,7 +21,6 @@ async fn adding_new_recipe_persists_and_returns_204_no_content(pool: PgPool) -> 
     let recipe_ingredients: Vec<Value> = create_recipe_ingredients_json(
         &generate_random_recipe_ingredients(all_units, all_ingredients),
     );
-    println!("{:?}", recipe_ingredients);
 
     let json = json!(
         {
@@ -31,7 +30,6 @@ async fn adding_new_recipe_persists_and_returns_204_no_content(pool: PgPool) -> 
             "steps": recipe_steps
         }
     );
-    println!("{:?}", &json);
     let request = create_post_request_to("recipes", json);
     let response = app
         .router

@@ -1,5 +1,3 @@
-use std::fmt::format;
-
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
@@ -7,7 +5,6 @@ use axum::{
     Json,
 };
 use serde::{Deserialize, Serialize};
-use serde_json::json;
 use sqlx::{query, PgPool};
 
 use crate::{
@@ -138,36 +135,49 @@ async fn fetch_ingredient_from_db(
 #[derive(Serialize, Deserialize)]
 pub struct GetIngredientsResponse {
     pub ingredients: Vec<Ingredient>,
-    // The last ingredient_id that was included.
+    // The id from which the next batch is accesbile.
+    // This id will be contained in the next response, but not this one.
     // It is none if there are no more ingredients for the query.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub last_ingredient_id: Option<i32>,
+    pub next_start_from: Option<i32>,
 }
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct IngredientsQuery {
     limit: i64,
-    // #[serde(skip_serializing_if = "Option::is_none")]
+    // Default start_id is 0
     #[serde(default)]
-    start_id: i32,
+    start_from: i32,
 }
 pub async fn get_ingredients_by_query(
     State(app_state): State<AppState>,
     query: Query<IngredientsQuery>,
 ) -> Result<impl IntoResponse, AppError> {
-    let ingredients = fetch_ingredients_from_db(&query, &app_state.pool).await?;
-    let last_ingredient_id: Option<i32> = match (ingredients.first(), ingredients.last()) {
-        (Some(first), Some(last))
-            if first.ingredient_id != last.ingredient_id
-                // We are casting length upwards so that it is not lossy.
-                && (ingredients.len() as i64) < query.limit =>
-        {
-            last.ingredient_id
+    if query.limit > 15 || query.limit < 1{
+        return Err(AppError::BadRequest);
+    }
+    let ingredients: Vec<Ingredient> = fetch_ingredients_from_db(&query, &app_state.pool).await?;
+    let next_start_from: Option<i32> = {
+        // We are casting length upwards so that it is not lossy.
+        if (ingredients.len() as i64) < query.limit {
+            None
+        } else {
+            let last = ingredients.last();
+            // If the vector isn't empty, and the returned values are valid
+            if last.is_some_and(|f| f.ingredient_id.is_some()) {
+                // We always want to return the next ingredient_id,
+                // and not the current last.
+                // So that at a limit of (n*ingredients/response)
+                // and using the "star_id" of the responses
+                // there are no overlapping ingredients.
+                Some(last.unwrap().ingredient_id.unwrap() + 1)
+            } else {
+                None
+            }
         }
-        (_, _) => None,
     };
     let response = GetIngredientsResponse {
         ingredients,
-        last_ingredient_id,
+        next_start_from,
     };
     Ok(Json(response))
 }
@@ -176,12 +186,6 @@ async fn fetch_ingredients_from_db(
     query: &Query<IngredientsQuery>,
     pool: &PgPool,
 ) -> Result<Vec<Ingredient>, AppError> {
-    
-    // let start_id = match query.start_id {
-    //     Some(id) => id,
-    //     None => 0,
-    // };
-
     let result = sqlx::query_as!(
         Ingredient,
         r#" SELECT * 
@@ -190,13 +194,10 @@ async fn fetch_ingredients_from_db(
             ORDER BY ingredient_id
             LIMIT $2
         "#,
-        query.start_id,
+        query.start_from,
         query.limit,
     )
     .fetch_all(pool)
     .await?;
-    if result.len() == 0 {
-        panic!("FUCK");
-    }
     Ok(result)
 }
