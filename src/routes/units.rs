@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
     Json,
@@ -115,4 +115,75 @@ async fn fetch_unit_from_db(pool: &PgPool, unit_id: i32) -> Result<Unit, AppErro
     .await?
     .ok_or(AppError::NotFound)?;
     Ok(unit)
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct GetUnitsResponse {
+    pub units: Vec<Unit>,
+    // The id from which the next batch is accesbile.
+    // This id will be contained in the next response, but not this one.
+    // It is none if there are no more units for the query.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub next_start_from: Option<i32>,
+}
+#[derive(Serialize, Deserialize, Debug)]
+pub struct UnitsQuery {
+    limit: i64,
+    // Default start_id is 0
+    #[serde(default)]
+    start_from: i32,
+}
+
+pub async fn get_units_by_query(
+    State(app_state): State<AppState>,
+    query: Query<UnitsQuery>,
+) -> Result<impl IntoResponse, AppError> {
+    if query.limit > 15 || query.limit < 1{
+        return Err(AppError::BadRequest);
+    }
+    let units: Vec<Unit> = fetch_units_from_db(&query, &app_state.pool).await?;
+    let next_start_from: Option<i32> = {
+        // We are casting length upwards so that it is not lossy.
+        if (units.len() as i64) < query.limit {
+            None
+        } else {
+            let last = units.last();
+            // If the vector isn't empty, and the returned values are valid
+            if last.is_some_and(|f| f.unit_id.is_some()) {
+                // We always want to return the next unit_id,
+                // and not the current last.
+                // So that at a limit of (n*units/response)
+                // and using the "star_id" of the responses
+                // there are no overlapping units.
+                Some(last.unwrap().unit_id.unwrap() + 1)
+            } else {
+                None
+            }
+        }
+    };
+    let response = GetUnitsResponse {
+        units,
+        next_start_from,
+    };
+    Ok(Json(response))
+}
+
+async fn fetch_units_from_db(
+    query: &Query<UnitsQuery>,
+    pool: &PgPool,
+) -> Result<Vec<Unit>, AppError> {
+    let result = sqlx::query_as!(
+        Unit,
+        r#" SELECT * 
+            FROM unit
+            WHERE unit_id >= $1
+            ORDER BY unit_id
+            LIMIT $2
+        "#,
+        query.start_from,
+        query.limit,
+    )
+    .fetch_all(pool)
+    .await?;
+    Ok(result)
 }

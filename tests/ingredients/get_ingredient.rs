@@ -1,9 +1,6 @@
 use std::default;
 
-use axum::{
-    body::to_bytes,
-    http::StatusCode,
-};
+use axum::{body::to_bytes, http::StatusCode};
 use fake::Fake;
 use just_recipe::{
     application::{app::App, state::AppState},
@@ -55,16 +52,15 @@ async fn getting_non_existent_ingredient_returns_404_not_found(pool: PgPool) -> 
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
     Ok(())
 }
-// TODO (oliver): Refactor this! Test the query parameters too, and errors too!
 // The desired behavior:
 // 1.) Sending a GET request to /ingredients returns
 //     a.) List of n (0 <= n <= 15) ingredients (sorted by id)
-//     b.) An endpoint to the next n ingredients
+//     b.) The next id to query from
 //     c.) 200 OK
 //     d.) Query Params: limit and start_from
 // 2.) The response JSON Format,
-//     for request at /ingredients
-//     (the default limit is 15)
+//     for request at /ingredients,
+//     limit is mandatory.
 // {
 //   ingredients: [
 //      {
@@ -76,15 +72,14 @@ async fn getting_non_existent_ingredient_returns_404_not_found(pool: PgPool) -> 
 //   ]
 //   next: "start_from=5&limit=15"
 // }
-
+// TODO (oliver) Make all the sad paths!
 #[sqlx::test(fixtures(path = "../fixtures", scripts("ingredients")))]
 async fn getting_ingredients_returns_ingredients_200_ok(pool: PgPool) -> sqlx::Result<()> {
     let app_state = AppState::new(pool);
     let app = App::new(app_state.clone(), default::Default::default(), 0).await;
     let limit: i64 = (1..=15).fake();
     let mut start_from: Option<i32> = None;
-    loop 
-    {
+    loop {
         let mut query_string = format!("limit={}", limit);
         if let Some(start_id) = start_from {
             query_string = format!("{}&start_from={}", query_string, start_id);
@@ -129,7 +124,7 @@ async fn getting_ingredients_returns_ingredients_200_ok(pool: PgPool) -> sqlx::R
         );
 
         assert_ingredients_match(&response_ingredients.ingredients, &ingredients_in_db);
-        if response_ingredients.next_start_from.is_none(){
+        if response_ingredients.next_start_from.is_none() {
             break;
         } else {
             start_from = response_ingredients.next_start_from;

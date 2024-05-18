@@ -2,7 +2,7 @@ use super::state::AppState;
 use crate::{
     fetch_all_ingredient_ids, fetch_all_unit_ids,
     routes::{
-        add_ingredient, add_recipe, add_unit, get_ingredient_by_id, get_ingredients_by_query, get_recipe, get_unit, health_check, remove_ingredient, remove_recipe, remove_unit, update_ingredient, update_recipe, update_unit
+        add_ingredient, add_recipe, add_unit, get_ingredient_by_id, get_ingredients_by_query, get_recipe, get_unit, get_units_by_query, health_check, remove_ingredient, remove_recipe, remove_unit, update_ingredient, update_recipe, update_unit
     },
 };
 use axum::{
@@ -49,7 +49,7 @@ impl App {
     fn create_router(state: AppState) -> Router {
         Router::new()
             .route("/", get(health_check))
-            .route("/units", post(add_unit).delete(remove_unit))
+            .route("/units", post(add_unit).delete(remove_unit).get(get_units_by_query))
             .route("/units/:unit_id", put(update_unit).get(get_unit))
             .route(
                 "/ingredients",
