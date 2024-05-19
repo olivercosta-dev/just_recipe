@@ -2,12 +2,15 @@ use std::default;
 
 use axum::http::StatusCode;
 use fake::{Fake, Faker};
-use just_recipe::{application::{app::App, state::AppState}, ingredient::Ingredient};
+use just_recipe::{
+    application::{app::App, state::AppState},
+    ingredient::Ingredient,
+    utilities::request_creators::create_post_request_to,
+};
 use serde_json::json;
 use sqlx::PgPool;
 use tower::ServiceExt;
 
-use crate::create_post_request_to;
 #[sqlx::test]
 async fn adding_new_ingredient_persists_returns_204_no_content(pool: PgPool) -> sqlx::Result<()> {
     let app_state = AppState::new(pool);

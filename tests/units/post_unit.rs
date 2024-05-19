@@ -2,12 +2,11 @@ use std::default;
 
 use axum::http::StatusCode;
 use fake::{Fake, Faker};
-use just_recipe::{application::{app::App, state::AppState}, unit::Unit};
+use just_recipe::{application::{app::App, state::AppState}, unit::Unit, utilities::request_creators::create_post_request_to};
 use serde_json::json;
 use sqlx::PgPool;
 use tower::ServiceExt;
 
-use crate::create_post_request_to;
 
 #[sqlx::test]
 async fn adding_new_unit_persists_and_returns_204_no_content(pool: PgPool) -> sqlx::Result<()> {

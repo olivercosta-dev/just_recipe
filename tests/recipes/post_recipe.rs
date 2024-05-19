@@ -2,16 +2,24 @@ use std::default;
 
 use axum::http::StatusCode;
 use fake::{Fake, Faker};
-use just_recipe::application::{app::App, state::AppState};
-use serde_json::{json, Value};
+use just_recipe::{
+    application::{app::App, state::AppState},
+    utilities::{
+        assertions::{
+            assert_compact_recipe_ingredients_exist, assert_recipe_exists,
+            assert_recipe_steps_exist,
+        },
+        fetchers::fetch_ingredients_and_units,
+        random_generation::{
+            recipes::generate_random_recipe_ingredients, steps::generate_random_number_of_steps,
+        },
+        request_creators::create_post_request_to,
+    },
+};
+use serde_json::json;
 use sqlx::PgPool;
 use tower::ServiceExt;
 
-use crate::{
-    assert_compact_recipe_ingredients_exist, assert_recipe_exists, assert_recipe_steps_exist,
-    create_post_request_to, create_recipe_steps_json_for_request, fetch_ingredients_and_units,
-    generate_random_number_of_steps, generate_random_recipe_ingredients,
-};
 #[sqlx::test(fixtures(path = "../fixtures", scripts("units", "ingredients")))]
 async fn adding_new_recipe_persists_and_returns_204_no_content(pool: PgPool) -> sqlx::Result<()> {
     let app_state = AppState::new(pool);
@@ -101,7 +109,7 @@ async fn adding_recipe_with_non_existent_ingredient_id_returns_422_unproccessabl
     let recipe_name = Faker.fake::<String>();
     let description = Faker.fake::<String>();
     let (ingredient_id, unit_id, quantity) = (Faker.fake::<i32>(), 1, String::from("3/4"));
-    let steps: Vec<Value> = create_recipe_steps_json_for_request(generate_random_number_of_steps());
+    let steps = generate_random_number_of_steps();
     let json = json!(
         {
             "name": recipe_name,
@@ -135,7 +143,7 @@ async fn adding_recipe_with_non_existent_unit_id_returns_422_unproccessable_enti
     let recipe_name = Faker.fake::<String>();
     let description = Faker.fake::<String>();
     let (ingredient_id, unit_id, quantity) = (1, Faker.fake::<i32>(), String::from("3/4"));
-    let steps: Vec<Value> = create_recipe_steps_json_for_request(generate_random_number_of_steps());
+    let steps = generate_random_number_of_steps();
     let json = json!(
         {
             "name": recipe_name,
@@ -169,7 +177,7 @@ async fn adding_recipe_with_duplicate_ingredient_ids_returns_422_unproccessable_
     let description = Faker.fake::<String>();
     let (ingredient_id1, unit_id1, quantity1) = (1, 1, String::from("3/4")); // Notice ingredient_id1 and ingredient_id2 are the same.
     let (ingredient_id2, unit_id2, quantity2) = (1, 1, String::from("1/4"));
-    let steps = create_recipe_steps_json_for_request(generate_random_number_of_steps());
+    let steps = generate_random_number_of_steps();
     let json = json!(
         {
             "name": recipe_name,

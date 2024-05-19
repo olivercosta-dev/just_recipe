@@ -5,20 +5,20 @@ use fake::Fake;
 use just_recipe::{
     application::{app::App, state::AppState},
     ingredient::Ingredient,
-    routes::GetIngredientsResponse,
+    routes::GetIngredientsResponse, utilities::{random_generation::ingredients::choose_random_ingredient, request_creators::create_get_request_to},
 };
 use serde_json::json;
 use sqlx::PgPool;
 use tower::ServiceExt;
 
-use crate::{choose_random_ingredient, create_get_request_to};
 #[sqlx::test(fixtures(path = "../fixtures", scripts("ingredients")))]
 async fn getting_existing_ingredient_returns_ingredient_and_200_ok(
     pool: PgPool,
 ) -> sqlx::Result<()> {
     let app_state = AppState::new(pool);
     let app = App::new(app_state.clone(), default::Default::default(), 0).await;
-    let ingredient = choose_random_ingredient(&app_state.pool).await;
+    let choose_random_ingredient = choose_random_ingredient(&app_state.pool);
+    let ingredient = choose_random_ingredient.await;
     let json = json!({}); // this is not needed for a get
     let request = create_get_request_to(
         "ingredients",

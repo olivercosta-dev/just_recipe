@@ -1,12 +1,12 @@
-use crate::{choose_random_unit, create_put_request_to};
 use std::default;
 
 use axum::http::StatusCode;
 use fake::{Fake, Faker};
-use just_recipe::{application::{app::App, state::AppState}, unit::Unit};
+use just_recipe::{application::{app::App, state::AppState}, unit::Unit, utilities::{random_generation::units::choose_random_unit, request_creators::create_put_request_to}};
 use serde_json::json;
 use sqlx::PgPool;
 use tower::ServiceExt;
+
 #[sqlx::test(fixtures(path = "../fixtures", scripts("units")))]
 async fn updating_existing_unit_gets_updated_returns_204_no_content(
     pool: PgPool,

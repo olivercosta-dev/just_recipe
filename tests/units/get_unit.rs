@@ -2,12 +2,11 @@ use std::default;
 
 use axum::{body::to_bytes, http::StatusCode};
 use fake::Fake;
-use just_recipe::{application::{app::App, state::AppState}, routes::GetUnitsResponse, unit::Unit};
+use just_recipe::{application::{app::App, state::AppState}, routes::GetUnitsResponse, unit::Unit, utilities::{random_generation::units::choose_random_unit, request_creators::create_get_request_to}};
 use serde_json::json;
 use sqlx::PgPool;
 use tower::ServiceExt;
 
-use crate::{choose_random_unit, create_get_request_to};
 #[sqlx::test(fixtures(path = "../fixtures", scripts("units")))]
 async fn getting_existing_unit_returns_ingredient_and_200_ok(pool: PgPool) -> sqlx::Result<()> {
     let app_state = AppState::new(pool);

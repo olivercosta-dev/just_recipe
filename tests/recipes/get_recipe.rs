@@ -1,25 +1,19 @@
 use std::{collections::HashSet, default};
 
-use axum::{body::to_bytes, http::StatusCode, response};
+use axum::{body::to_bytes, http::StatusCode};
 use fake::Fake;
-use itertools::Itertools;
 use just_recipe::{
     application::{app::App, state::AppState},
     recipe::{
         recipe::Recipe,
         recipe_ingredient::{DetailedRecipeIngredient, RecipeIngredient},
     },
-    routes::GetRecipesResponse,
+    routes::GetRecipesResponse, utilities::{assertions::{assert_detailed_ingredients_exist, assert_ingredients_exist, assert_recipe_exists, assert_recipe_steps_exist}, random_generation::recipes::choose_random_recipe_id, request_creators::create_get_request_to},
 };
 use serde_json::json;
 use sqlx::PgPool;
 use tower::ServiceExt;
 
-use crate::{
-    assert_detailed_ingredients_exist, assert_ingredients_exist, assert_recipe_exists,
-    assert_recipe_steps_exist, choose_random_recipe_id,
-    create_get_request_to,
-};
 
 #[sqlx::test(fixtures(
     path = "../fixtures",

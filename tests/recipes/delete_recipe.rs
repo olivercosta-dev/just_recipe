@@ -1,12 +1,11 @@
 use std::default;
 
 use axum::http::StatusCode;
-use just_recipe::application::{app::App, state::AppState};
+use just_recipe::{application::{app::App, state::AppState}, utilities::{random_generation::recipes::choose_random_recipe_id, request_creators::create_delete_request_to}};
 use serde_json::json;
 use sqlx::PgPool;
 use tower::ServiceExt;
 
-use crate::{choose_random_recipe_id, create_delete_request_to};
 #[sqlx::test(fixtures(path = "../fixtures", scripts("units", "ingredients", "recipes", "recipe_ingredients", "steps")))]
 async fn deleting_existing_recipe_gets_removed_returns_204_content(
     pool: PgPool,

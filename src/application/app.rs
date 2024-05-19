@@ -1,11 +1,12 @@
 use super::state::AppState;
 use crate::{
-    fetch_all_ingredient_ids, fetch_all_unit_ids,
     routes::{
         add_ingredient, add_recipe, add_unit, get_ingredient_by_id, get_ingredients_by_query,
-        get_recipe, get_unit, get_units_by_query, health_check, remove_ingredient, remove_recipe,
-        remove_unit, update_ingredient, update_recipe, update_unit, get_recipe_by_query
+        get_recipe, get_recipe_by_query, get_unit, get_units_by_query, health_check,
+        remove_ingredient, remove_recipe, remove_unit, update_ingredient, update_recipe,
+        update_unit,
     },
+    utilities::fetchers::{fetch_all_ingredient_ids, fetch_all_unit_ids},
 };
 use axum::{
     routing::{get, post, put},
@@ -68,7 +69,9 @@ impl App {
             )
             .route(
                 "/recipes",
-                post(add_recipe).delete(remove_recipe).get(get_recipe_by_query),
+                post(add_recipe)
+                    .delete(remove_recipe)
+                    .get(get_recipe_by_query),
             )
             .route("/recipes/:recipe_id", put(update_recipe).get(get_recipe))
             .layer(CatchPanicLayer::new())
@@ -94,7 +97,7 @@ mod test {
 
     use crate::{
         application::{app::App, state::AppState},
-        fetch_all_ingredient_ids, fetch_all_unit_ids,
+        utilities::fetchers::{fetch_all_ingredient_ids, fetch_all_unit_ids},
     };
     #[sqlx::test(fixtures(path = "../../tests/fixtures", scripts("ingredients")))]
     async fn fetches_all_ingredients(pool: PgPool) -> sqlx::Result<()> {

@@ -6,17 +6,17 @@ use just_recipe::{
     application::{app::App, state::AppState},
     ingredient::Ingredient,
     unit::Unit,
+    utilities::{
+        assertions::{
+            assert_compact_recipe_ingredients_exist, assert_recipe_exists,
+            assert_recipe_steps_exist,
+        }, fetchers::fetch_ingredients_and_units, random_generation::{recipes::{choose_random_recipe_id, generate_random_recipe_ingredients}, steps::generate_random_number_of_steps}, request_creators::create_put_request_to
+    },
 };
 use serde_json::json;
 use sqlx::PgPool;
 use tower::ServiceExt;
 
-use crate::{
-    assert_compact_recipe_ingredients_exist, assert_recipe_exists, assert_recipe_steps_exist,
-    choose_random_recipe_id, create_put_request_to,
-    create_recipe_steps_json_for_request, fetch_ingredients_and_units,
-    generate_random_number_of_steps, generate_random_recipe_ingredients,
-};
 #[sqlx::test(fixtures(
     path = "../fixtures",
     scripts("units", "ingredients", "recipes", "recipe_ingredients")
@@ -62,7 +62,7 @@ async fn updating_non_existing_recipe_returns_404_not_found(pool: PgPool) -> sql
     let recipe_description = Faker.fake::<String>();
     let (ingredients, units) = fetch_ingredients_and_units(&app_state.pool).await;
     let recipe_ingredients = generate_random_recipe_ingredients(units, ingredients);
-    let recipe_steps = create_recipe_steps_json_for_request(generate_random_number_of_steps());
+    let recipe_steps = generate_random_number_of_steps();
     let json = json!({
         "recipe_id": recipe_id,
         "name": recipe_name,
@@ -95,7 +95,7 @@ async fn updating_recipe_with_non_existent_unit_returns_422_unproccessable_entit
         plural_name: Faker.fake::<String>(),
     }];
     let recipe_ingredients = generate_random_recipe_ingredients(units, ingredients);
-    let recipe_steps = create_recipe_steps_json_for_request(generate_random_number_of_steps());
+    let recipe_steps = generate_random_number_of_steps();
     let json = json!({
         "recipe_id": recipe_id,
         "name": recipe_name,
@@ -128,8 +128,7 @@ async fn updating_recipe_with_non_existent_ingredient_id_returns_422_unproccessa
         singular_name: Faker.fake::<String>(),
         plural_name: Faker.fake::<String>(),
     }];
-    let recipe_ing = generate_random_recipe_ingredients(units, ingredients);
-    let recipe_ingredients = create_recipe_ingredients_json(&recipe_ing);
+    let recipe_ingredients = generate_random_recipe_ingredients(units, ingredients);
     let recipe_steps = generate_random_number_of_steps();
     let json = json!({
         "recipe_id": recipe_id,

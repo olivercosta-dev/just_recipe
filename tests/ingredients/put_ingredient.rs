@@ -2,12 +2,11 @@ use std::default;
 
 use axum::http::StatusCode;
 use fake::{Fake, Faker};
-use just_recipe::{application::{app::App, state::AppState}, ingredient::Ingredient};
+use just_recipe::{application::{app::App, state::AppState}, ingredient::Ingredient, utilities::{random_generation::ingredients::choose_random_ingredient, request_creators::create_put_request_to}};
 use serde_json::json;
 use sqlx::PgPool;
 use tower::ServiceExt;
 
-use crate::{choose_random_ingredient, create_put_request_to};
 #[sqlx::test(fixtures(path = "../fixtures", scripts("ingredients")))]
 async fn updating_existing_ingredient_gets_updated_returns_204_no_content(
     pool: PgPool,
