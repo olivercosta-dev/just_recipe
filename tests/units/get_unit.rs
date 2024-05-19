@@ -41,10 +41,9 @@ async fn getting_non_existent_unit_returns_404_not_found(pool: PgPool) -> sqlx::
     Ok(())
 }
 
-
 // TODO (oliver) Make all the sad paths!
 #[sqlx::test(fixtures(path = "../fixtures", scripts("units")))]
-async fn getting_unit_returns_unit_200_ok(pool: PgPool) -> sqlx::Result<()> {
+async fn getting_units_returns_units_200_ok(pool: PgPool) -> sqlx::Result<()> {
     let app_state = AppState::new(pool);
     let app = App::new(app_state.clone(), default::Default::default(), 0).await;
     let limit: i64 = (1..=15).fake();

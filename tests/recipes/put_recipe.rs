@@ -7,7 +7,7 @@ use serde_json::json;
 use sqlx::PgPool;
 use tower::ServiceExt;
 
-use crate::{assert_recipe_exists, assert_recipe_ingredients_exist, assert_recipe_steps_exist, choose_random_recipe_id, create_put_request_to, create_recipe_ingredients_json, create_recipe_steps_json_for_request, fetch_ingredients_and_units, generate_random_number_of_steps, generate_random_recipe_ingredients};
+use crate::{assert_recipe_exists, assert_recipe_ingredients_exist, assert_recipe_steps_exist_from_json, choose_random_recipe_id, create_put_request_to, create_recipe_ingredients_json, create_recipe_steps_json_for_request, fetch_ingredients_and_units, generate_random_number_of_steps, generate_random_recipe_ingredients};
 #[sqlx::test(fixtures(path = "../fixtures", scripts("units", "ingredients", "recipes", "recipe_ingredients")))]
 async fn updating_existing_recipe_gets_updated_returns_204_no_content(
     pool: PgPool,
@@ -32,7 +32,7 @@ async fn updating_existing_recipe_gets_updated_returns_204_no_content(
     let response = app.router.oneshot(request).await.unwrap();
     assert_eq!(response.status(), StatusCode::NO_CONTENT);
     assert_recipe_exists(&app_state.pool, &recipe_name, &recipe_description).await;
-    assert_recipe_steps_exist(&app_state.pool, recipe_steps, recipe_id).await;
+    assert_recipe_steps_exist_from_json(&app_state.pool, recipe_steps, recipe_id).await;
     assert_recipe_ingredients_exist(&app_state.pool, recipe_ingredients, recipe_id).await;
     Ok(())
 }

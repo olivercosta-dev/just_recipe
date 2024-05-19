@@ -8,12 +8,12 @@ use crate::{
     unit::Unit,
 };
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     http::StatusCode,
     response::IntoResponse,
     Json,
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use sqlx::{postgres::PgQueryResult, Error as SqlxError, PgPool};
 
 use self::{
@@ -238,7 +238,7 @@ async fn delete_recipe_ingredients(recipe_id: i32, app_state: &AppState) -> Resu
     .await?;
     Ok(())
 }
-
+// TODO (oliver): Rename all the get routes
 pub async fn get_recipe(
     State(app_state): State<AppState>,
     Path(recipe_id): Path<i32>,
@@ -322,4 +322,74 @@ async fn fetch_recipe_from_db(
     .await?;
     let recipe = Recipe::new(recipe_id, name, description, detailed_ingredients, steps);
     Ok(recipe)
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct GetRecipesResponse {
+    pub recipes: Vec<Recipe<DetailedRecipeIngredient, Backed>>,
+    pub next_start_from: Option<i32>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct RecipesQuery {
+    limit: i64, // TODO (oliver): Make the limit a type, that is always valid
+    // Default start_id is 0
+    #[serde(default)]
+    start_from: i32,
+}
+
+pub async fn get_recipe_by_query(
+    State(state): State<AppState>,
+    query: Query<RecipesQuery>,
+) -> Result<impl IntoResponse, AppError> {
+    if query.limit > 15 || query.limit < 1 {
+        return Err(AppError::BadRequest);
+    }
+    let recipe_ids = sqlx::query!(
+        r#"
+                SELECT recipe_id as id 
+                FROM recipe
+                WHERE recipe_id >= $1 
+                ORDER BY recipe_id
+                LIMIT $2
+            "#,
+        query.start_from,
+        query.limit + 1
+    )
+    .fetch_all(&state.pool)
+    .await?;
+    // OPTIMIZE (oliver): This could be faster if it used arrays, as the max capacity is known.
+    let mut recipes: Vec<Recipe<DetailedRecipeIngredient, Backed>> = Vec::new();
+
+    for recipe_id_record in recipe_ids {
+        let recipe = fetch_recipe_from_db(&state.pool, recipe_id_record.id).await?;
+        recipes.push(recipe);
+    }
+
+    let next_start_from: Option<i32> = {
+        // We are casting length upwards so that it is not lossy.
+        // It is (<=) because the vector we have in ingredients
+        // is always going to try to fetch 1 more ingredient.
+        if (recipes.len() as i64) < query.limit + 1 {
+            None
+        } else {
+            let last = recipes.last();
+            // If the vector isn't empty, and the returned values are valid
+            if last.is_some_and(|f| f.recipe_id().is_some()) {
+                // We always want to return the next recipe_id,
+                // and not the current last.
+                // So that at a limit of (n*recipes/response)
+                // and using the "start_id" of the responses
+                // there are no overlapping recipes.
+                Some(last.unwrap().recipe_id().unwrap() + 1)
+            } else {
+                None
+            }
+        }
+    };
+    let response = GetRecipesResponse{
+        recipes,
+        next_start_from
+    };
+    Ok(Json(response))
 }

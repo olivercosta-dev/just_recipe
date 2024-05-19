@@ -158,7 +158,9 @@ pub async fn get_ingredients_by_query(
     let ingredients: Vec<Ingredient> = fetch_ingredients_from_db(&query, &app_state.pool).await?;
     let next_start_from: Option<i32> = {
         // We are casting length upwards so that it is not lossy.
-        if (ingredients.len() as i64) < query.limit {
+        // It is (<=) because the vector we have in ingredients 
+        // is always going to try to fetch 1 more ingredient.
+        if (ingredients.len() as i64) <= query.limit {
             None
         } else {
             let last = ingredients.last();
@@ -182,6 +184,7 @@ pub async fn get_ingredients_by_query(
     Ok(Json(response))
 }
 
+/// Fetches exactly ONE MORE ingredient than in the query!
 async fn fetch_ingredients_from_db(
     query: &Query<IngredientsQuery>,
     pool: &PgPool,
@@ -195,7 +198,7 @@ async fn fetch_ingredients_from_db(
             LIMIT $2
         "#,
         query.start_from,
-        query.limit,
+        query.limit + 1,
     )
     .fetch_all(pool)
     .await?;

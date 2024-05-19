@@ -2,7 +2,6 @@ pub mod ingredients;
 pub mod recipes;
 pub mod units;
 
-
 use std::collections::HashSet;
 
 use axum::{body::Body, http::Request};
@@ -11,7 +10,7 @@ use itertools::Itertools;
 use just_recipe::{
     ingredient::Ingredient,
     recipe::{
-        recipe_ingredient::{CompactRecipeIngredient, RecipeIngredient},
+        recipe_ingredient::{CompactRecipeIngredient, DetailedRecipeIngredient, RecipeIngredient},
         recipe_step::RecipeStep,
     },
     unit::Unit,
@@ -57,14 +56,14 @@ pub fn create_get_request_to(
     json: serde_json::Value,
 ) -> Request<Body> {
     let resource;
-    
+
     if resource_id.is_none() {
         resource = String::from("");
     } else {
         resource = format!("/{}", resource_id.unwrap());
     }
     let query;
-    if query_params.is_some(){
+    if query_params.is_some() {
         query = "?".to_owned() + &query_params.unwrap();
     } else {
         query = String::from("");
@@ -166,7 +165,7 @@ pub async fn assert_recipe_ingredients_exist(
     }
 }
 
-pub async fn assert_recipe_steps_exist(pool: &PgPool, recipe_steps: Vec<Value>, recipe_id: i32) {
+pub async fn assert_recipe_steps_exist_from_json(pool: &PgPool, recipe_steps: Vec<Value>, recipe_id: i32) {
     let ordered_recipe_step_records = sqlx::query!(
         r#"
             SELECT step_id, recipe_id, step_number, instruction
@@ -206,6 +205,64 @@ pub async fn assert_recipe_steps_exist(pool: &PgPool, recipe_steps: Vec<Value>, 
     }
 }
 
+/// Checks if all recipe steps exist in the database.
+///
+/// # Arguments
+///
+/// * `pool` - A reference to the database connection pool.
+/// * `recipe_steps` - A vector of `RecipeStep` objects.
+/// * `recipe_id` - The ID of the recipe.
+///
+/// # Errors
+///
+/// This function will return an error if any database operation fails or if the number of
+/// steps in the database does not match the number of provided steps, or if any step's details
+/// do not match.
+pub async fn assert_recipe_steps_exist(
+    pool: &PgPool,
+    recipe_steps: &[RecipeStep],
+    recipe_id: i32
+) -> Result<(), String> {
+    let ordered_recipe_step_records = sqlx::query!(
+        r#"
+            SELECT step_id, recipe_id, step_number, instruction
+            FROM step
+            WHERE recipe_id = $1
+            ORDER BY step_number;
+        "#,
+        recipe_id
+    )
+    .fetch_all(pool)
+    .await.unwrap();
+
+    if ordered_recipe_step_records.len() != recipe_steps.len() {
+        return Err(format!(
+            "Number of steps mismatch. Expected: {}, Found: {}",
+            recipe_steps.len(),
+            ordered_recipe_step_records.len()
+        ));
+    }
+
+    for (index, step) in recipe_steps.iter().enumerate() {
+        let recipe_step_record = &ordered_recipe_step_records[index];
+        let (record_recipe_id, record_step_number, record_instruction) = (
+            recipe_step_record.recipe_id,
+            recipe_step_record.step_number,
+            recipe_step_record.instruction.clone(),
+        );
+
+        if (record_recipe_id, record_step_number, record_instruction.clone()) != (recipe_id, step.step_number, step.instruction.clone()) {
+            return Err(format!(
+                "Step mismatch at index {}: expected ({}, {}, {}), found ({}, {}, {})",
+                index,
+                recipe_id, step.step_number, step.instruction,
+                record_recipe_id, record_step_number, record_instruction
+            ));
+        }
+    }
+
+    Ok(())
+}
 // TODO (oliver): This code isn't fully safe yet. It can panic with some length discrepancies
 pub fn generate_random_recipe_ingredients(
     units: Vec<Unit>,
@@ -298,7 +355,9 @@ pub async fn choose_random_recipe_id(pool: &PgPool) -> i32 {
     recipes[random_index].recipe_id
 }
 
-pub async fn assert_detailed_recipe_ingredients_exist(
+
+
+pub async fn assert_ingredients_exist(
     pool: &PgPool,
     ingredients: Vec<&Ingredient>,
 ) {
@@ -320,6 +379,51 @@ pub async fn assert_detailed_recipe_ingredients_exist(
     .unwrap();
 
     assert_eq!(ingr_records.len(), ingredients.len());
+}
+
+/// Checks if all detailed ingredients exist in the database.
+///
+/// # Arguments
+///
+/// * `pool` - A reference to the database connection pool.
+/// * `ingredients` - A vector of references to `DetailedRecipeIngredient` objects.
+///
+/// # Errors
+///
+/// This function will return an error if any database operation fails or if any
+/// ingredient does not exist in the database.
+pub async fn assert_detailed_ingredients_exist(
+    pool: &PgPool,
+    ingredients: &[DetailedRecipeIngredient],
+) -> Result<(), String> {
+    for ingr in ingredients.iter() {
+        if let Some(ingredient_id) = ingr.ingredient().ingredient_id {
+            let result: Option<Ingredient> = sqlx::query_as!(
+                Ingredient,
+                r#"
+                    SELECT *
+                    FROM ingredient
+                    WHERE ingredient_id = $1;
+                "#,
+                ingredient_id
+            )
+            .fetch_optional(pool)
+            .await.unwrap();
+
+            if result.is_none() {
+                return Err(format!(
+                    "Ingredient with ID {} does not exist in the database.",
+                    ingredient_id
+                ));
+            }
+        } else {
+            return Err(format!(
+                "Ingredient ID is None for one of the provided ingredients."
+            ));
+        }
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]

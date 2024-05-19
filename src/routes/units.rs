@@ -121,7 +121,7 @@ async fn fetch_unit_from_db(pool: &PgPool, unit_id: i32) -> Result<Unit, AppErro
 pub struct GetUnitsResponse {
     pub units: Vec<Unit>,
     // The id from which the next batch is accesbile.
-    // This id will be contained in the next response, but not this one.
+    // The ID and details themselves will be contained in the next response, not this one.
     // It is none if there are no more units for the query.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub next_start_from: Option<i32>,
@@ -144,7 +144,9 @@ pub async fn get_units_by_query(
     let units: Vec<Unit> = fetch_units_from_db(&query, &app_state.pool).await?;
     let next_start_from: Option<i32> = {
         // We are casting length upwards so that it is not lossy.
-        if (units.len() as i64) < query.limit {
+        // It is (<=) because the vector we have in ingredients 
+        // is always going to try to fetch 1 more ingredient.
+        if (units.len() as i64) <= query.limit {
             None
         } else {
             let last = units.last();
@@ -181,7 +183,7 @@ async fn fetch_units_from_db(
             LIMIT $2
         "#,
         query.start_from,
-        query.limit,
+        query.limit + 1,
     )
     .fetch_all(pool)
     .await?;
