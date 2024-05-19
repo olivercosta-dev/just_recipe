@@ -124,9 +124,9 @@ pub async fn assert_recipe_exists(pool: &PgPool, recipe_name: &str, description:
     recipe_record.recipe_id
 }
 
-pub async fn assert_recipe_ingredients_exist(
+pub async fn assert_compact_recipe_ingredients_exist(
     pool: &PgPool,
-    recipe_ingredients: Vec<Value>,
+    recipe_ingredients: &[CompactRecipeIngredient],
     recipe_id: i32,
 ) {
     let records = sqlx::query!(
@@ -145,65 +145,26 @@ pub async fn assert_recipe_ingredients_exist(
     assert_eq!(records.len(), recipe_ingredients.len());
 
     for ingredient in recipe_ingredients {
-        let ingredient_id = i32::try_from(ingredient["ingredient_id"].as_i64().unwrap()).unwrap();
-        let unit_id = i32::try_from(ingredient["unit_id"].as_i64().unwrap()).unwrap();
-        let quantity = ingredient["quantity"].as_str().unwrap();
+        let ingredient_id = ingredient.ingredient();
+        let unit_id = ingredient.unit();
+        let quantity = ingredient.quantity();
 
         let record = records
             .iter()
-            .find(|&rec| rec.ingredient_id == ingredient_id)
+            .find(|&rec| rec.ingredient_id == *ingredient_id)
             .expect("Ingredient record not found");
         assert_eq!(
             (
                 record.recipe_id,
                 record.ingredient_id,
                 record.unit_id,
-                &record.quantity.to_string()
+                record.quantity.as_str()
             ),
-            (recipe_id, ingredient_id, unit_id, &quantity.to_string())
+            (recipe_id, *ingredient_id, *unit_id, quantity)
         );
     }
 }
 
-pub async fn assert_recipe_steps_exist_from_json(pool: &PgPool, recipe_steps: Vec<Value>, recipe_id: i32) {
-    let ordered_recipe_step_records = sqlx::query!(
-        r#"
-            SELECT step_id, recipe_id, step_number, instruction
-            FROM step
-            WHERE recipe_id = $1
-            ORDER BY step_number;
-        "#,
-        recipe_id
-    )
-    .fetch_all(pool)
-    .await
-    .expect("Should have gotten a result for the recipe steps.");
-    assert_eq!(ordered_recipe_step_records.len(), recipe_steps.len());
-
-    for (index, step) in recipe_steps.iter().enumerate() {
-        let step_number = i32::try_from(
-            step["step_number"]
-                .as_i64()
-                .expect("Should have been an integer"),
-        )
-        .expect("Should have been an i32");
-        let instruction = String::from(
-            step["instruction"]
-                .as_str()
-                .expect("Should have been a string"),
-        );
-        let recipe_step_record = &ordered_recipe_step_records[index];
-        let (record_recipe_id, record_step_number, record_instruction) = (
-            recipe_step_record.recipe_id,
-            recipe_step_record.step_number,
-            recipe_step_record.instruction.clone(),
-        );
-        assert_eq!(
-            (record_recipe_id, record_step_number, record_instruction),
-            (recipe_id, step_number, instruction)
-        );
-    }
-}
 
 /// Checks if all recipe steps exist in the database.
 ///
@@ -291,20 +252,6 @@ pub fn generate_random_recipe_ingredients(
     recipe_ingredients
 }
 
-pub fn create_recipe_ingredients_json(
-    recipe_ingredients: &[CompactRecipeIngredient],
-) -> Vec<Value> {
-    recipe_ingredients
-        .iter()
-        .map(|rec_ingr| {
-            json!({
-                "ingredient_id": rec_ingr.ingredient(),
-                "unit_id": rec_ingr.unit(),
-                "quantity": rec_ingr.quantity()
-            })
-        })
-        .collect()
-}
 
 pub async fn fetch_ingredients_and_units(pool: &PgPool) -> (Vec<Ingredient>, Vec<Unit>) {
     let all_ingredients = sqlx::query_as!(Ingredient, "SELECT * FROM ingredient")

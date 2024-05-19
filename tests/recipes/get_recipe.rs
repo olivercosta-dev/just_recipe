@@ -16,7 +16,9 @@ use sqlx::PgPool;
 use tower::ServiceExt;
 
 use crate::{
-    assert_detailed_ingredients_exist, assert_ingredients_exist, assert_recipe_exists, assert_recipe_steps_exist, assert_recipe_steps_exist_from_json, choose_random_recipe_id, create_get_request_to
+    assert_detailed_ingredients_exist, assert_ingredients_exist, assert_recipe_exists,
+    assert_recipe_steps_exist, choose_random_recipe_id,
+    create_get_request_to,
 };
 
 #[sqlx::test(fixtures(
@@ -52,16 +54,7 @@ async fn getting_existing_recipe_returns_recipe_and_200_ok(pool: PgPool) -> sqlx
         recipe_id_in_db
     );
 
-    assert_recipe_steps_exist_from_json(
-        &app_state.pool,
-        response_recipe
-            .steps()
-            .iter()
-            .map(|f| json!(f))
-            .collect_vec(),
-        recipe_id,
-    )
-    .await;
+    assert_recipe_steps_exist(&app_state.pool, response_recipe.steps(), recipe_id).await.unwrap();
     assert_ingredients_exist(
         &app_state.pool,
         response_recipe
@@ -124,11 +117,17 @@ async fn getting_recipes_returns_recipes_200_ok(pool: PgPool) -> sqlx::Result<()
 
         // Here goes the db assertions
         for recipe in response_recipes.recipes {
-            let rec_id = recipe.recipe_id().expect("Recipe id should have been Some(i32)");
+            let rec_id = recipe
+                .recipe_id()
+                .expect("Recipe id should have been Some(i32)");
             let already_exists = queried_recipe_ids.insert(recipe.recipe_id().unwrap());
             assert!(!already_exists); // The endpoint should never give overlapping results (if the queries are consisten)
-            assert_detailed_ingredients_exist(&app_state.pool, recipe.ingredients()).await.unwrap();
-            assert_recipe_steps_exist(&app_state.pool, recipe.steps(), rec_id.clone()).await.unwrap();
+            assert_detailed_ingredients_exist(&app_state.pool, recipe.ingredients())
+                .await
+                .unwrap();
+            assert_recipe_steps_exist(&app_state.pool, recipe.steps(), rec_id.clone())
+                .await
+                .unwrap();
         }
         // End of db assertions
         // After all is done, we can decide whether it is over or not
