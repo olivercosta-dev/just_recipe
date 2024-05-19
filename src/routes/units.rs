@@ -138,29 +138,18 @@ pub async fn get_units_by_query(
     State(app_state): State<AppState>,
     query: Query<UnitsQuery>,
 ) -> Result<impl IntoResponse, AppError> {
-    if query.limit > 15 || query.limit < 1{
+    if query.limit > 15 || query.limit < 1 {
         return Err(AppError::BadRequest);
     }
-    let units: Vec<Unit> = fetch_units_from_db(&query, &app_state.pool).await?;
+    let mut units: Vec<Unit> = fetch_units_from_db(&query, &app_state.pool).await?;
     let next_start_from: Option<i32> = {
         // We are casting length upwards so that it is not lossy.
-        // It is (<=) because the vector we have in ingredients 
+        // It is (<=) because the vector we have in ingredients
         // is always going to try to fetch 1 more ingredient.
         if (units.len() as i64) <= query.limit {
             None
         } else {
-            let last = units.last();
-            // If the vector isn't empty, and the returned values are valid
-            if last.is_some_and(|f| f.unit_id.is_some()) {
-                // We always want to return the next unit_id,
-                // and not the current last.
-                // So that at a limit of (n*units/response)
-                // and using the "star_id" of the responses
-                // there are no overlapping units.
-                Some(last.unwrap().unit_id.unwrap() + 1)
-            } else {
-                None
-            }
+            units.pop().and_then(|unit| unit.unit_id)
         }
     };
     let response = GetUnitsResponse {

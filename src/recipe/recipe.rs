@@ -13,7 +13,7 @@ use super::{
 // TODO (oliver): Make the recipe step always sorted!
 // Backed means each unit, and ingredient is backed by the database,
 // It does not mean that the recipe necessarily exists!
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 pub struct Recipe<I: RecipeIngredient, BackedState = NotBacked> {
     recipe_id: Option<i32>,
     name: String,
@@ -28,8 +28,8 @@ pub struct NotBacked;
 
 // General implementations for ALL recipe states/types.
 impl<I: RecipeIngredient, BackedState> Recipe<I, BackedState> {
-    pub fn recipe_id(&self) -> Option<&i32> {
-        self.recipe_id.as_ref()
+    pub fn recipe_id(&self) -> Option<i32> {
+        self.recipe_id.clone()
     }
     pub fn name(&self) -> &str {
         &self.name

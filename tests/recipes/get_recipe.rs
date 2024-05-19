@@ -49,7 +49,7 @@ async fn getting_existing_recipe_returns_recipe_and_200_ok(pool: PgPool) -> sqlx
         response_recipe
             .recipe_id()
             .expect("recipe_id should have existed"),
-        &recipe_id_in_db
+        recipe_id_in_db
     );
 
     assert_recipe_steps_exist_from_json(
@@ -125,7 +125,7 @@ async fn getting_recipes_returns_recipes_200_ok(pool: PgPool) -> sqlx::Result<()
         // Here goes the db assertions
         for recipe in response_recipes.recipes {
             let rec_id = recipe.recipe_id().expect("Recipe id should have been Some(i32)");
-            let already_exists = queried_recipe_ids.insert(*recipe.recipe_id().clone().unwrap());
+            let already_exists = queried_recipe_ids.insert(recipe.recipe_id().unwrap());
             assert!(!already_exists); // The endpoint should never give overlapping results (if the queries are consisten)
             assert_detailed_ingredients_exist(&app_state.pool, recipe.ingredients()).await.unwrap();
             assert_recipe_steps_exist(&app_state.pool, recipe.steps(), rec_id.clone()).await.unwrap();

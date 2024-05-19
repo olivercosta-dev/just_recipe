@@ -96,7 +96,7 @@ async fn getting_ingredients_returns_ingredients_200_ok(pool: PgPool) -> sqlx::R
 
         let response_ingredients: GetIngredientsResponse =
             serde_json::from_slice(&bytes).expect("Failed to deserialize JSON");
-
+     
         assert!(response_ingredients.ingredients.len() as i64 <= limit);
         let start_id = if let Some(start_id) = start_from {
             start_id
@@ -110,7 +110,7 @@ async fn getting_ingredients_returns_ingredients_200_ok(pool: PgPool) -> sqlx::R
                 FROM ingredient
                 WHERE ingredient_id >= $1
                 ORDER BY ingredient_id
-                LIMIT $2
+                LIMIT $2;
             "#,
             start_id,
             limit
@@ -120,7 +120,7 @@ async fn getting_ingredients_returns_ingredients_200_ok(pool: PgPool) -> sqlx::R
         .unwrap();
         assert_eq!(
             response_ingredients.ingredients.len(),
-            ingredients_in_db.len()
+            ingredients_in_db.len(),
         );
 
         assert_ingredients_match(&response_ingredients.ingredients, &ingredients_in_db);

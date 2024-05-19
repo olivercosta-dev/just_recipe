@@ -152,29 +152,19 @@ pub async fn get_ingredients_by_query(
     State(app_state): State<AppState>,
     query: Query<IngredientsQuery>,
 ) -> Result<impl IntoResponse, AppError> {
-    if query.limit > 15 || query.limit < 1{
+    if query.limit > 15 || query.limit < 1 {
         return Err(AppError::BadRequest);
     }
-    let ingredients: Vec<Ingredient> = fetch_ingredients_from_db(&query, &app_state.pool).await?;
+    let mut ingredients: Vec<Ingredient> =
+        fetch_ingredients_from_db(&query, &app_state.pool).await?;
     let next_start_from: Option<i32> = {
         // We are casting length upwards so that it is not lossy.
-        // It is (<=) because the vector we have in ingredients 
+        // It is (<=) because the vector we have in ingredients
         // is always going to try to fetch 1 more ingredient.
         if (ingredients.len() as i64) <= query.limit {
             None
         } else {
-            let last = ingredients.last();
-            // If the vector isn't empty, and the returned values are valid
-            if last.is_some_and(|f| f.ingredient_id.is_some()) {
-                // We always want to return the next ingredient_id,
-                // and not the current last.
-                // So that at a limit of (n*ingredients/response)
-                // and using the "star_id" of the responses
-                // there are no overlapping ingredients.
-                Some(last.unwrap().ingredient_id.unwrap() + 1)
-            } else {
-                None
-            }
+            ingredients.pop().and_then(|ingr| ingr.ingredient_id)
         }
     };
     let response = GetIngredientsResponse {
@@ -195,10 +185,10 @@ async fn fetch_ingredients_from_db(
             FROM ingredient
             WHERE ingredient_id >= $1
             ORDER BY ingredient_id
-            LIMIT $2
+            LIMIT $2;
         "#,
         query.start_from,
-        query.limit + 1,
+        (query.limit + 1),
     )
     .fetch_all(pool)
     .await?;

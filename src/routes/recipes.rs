@@ -351,7 +351,7 @@ pub async fn get_recipe_by_query(
                 FROM recipe
                 WHERE recipe_id >= $1 
                 ORDER BY recipe_id
-                LIMIT $2
+                LIMIT $2;
             "#,
         query.start_from,
         query.limit + 1
@@ -373,23 +373,13 @@ pub async fn get_recipe_by_query(
         if (recipes.len() as i64) < query.limit + 1 {
             None
         } else {
-            let last = recipes.last();
-            // If the vector isn't empty, and the returned values are valid
-            if last.is_some_and(|f| f.recipe_id().is_some()) {
-                // We always want to return the next recipe_id,
-                // and not the current last.
-                // So that at a limit of (n*recipes/response)
-                // and using the "start_id" of the responses
-                // there are no overlapping recipes.
-                Some(last.unwrap().recipe_id().unwrap() + 1)
-            } else {
-                None
-            }
+            // Remove one element as the fetching overallocated by 1
+            recipes.pop().and_then(|rec: Recipe<DetailedRecipeIngredient, Backed>| rec.recipe_id())
         }
     };
-    let response = GetRecipesResponse{
+    let response = GetRecipesResponse {
         recipes,
-        next_start_from
+        next_start_from,
     };
     Ok(Json(response))
 }
