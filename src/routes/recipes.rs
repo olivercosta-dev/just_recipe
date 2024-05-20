@@ -98,7 +98,6 @@ pub async fn update_recipe_handler(
     Ok(StatusCode::NO_CONTENT)
 }
 
-// TODO (oliver): Rename all the get routes
 pub async fn get_recipe_handler(
     State(app_state): State<AppState>,
     Path(recipe_id): Path<i32>,

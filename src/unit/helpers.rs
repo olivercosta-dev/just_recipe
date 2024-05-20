@@ -1,5 +1,5 @@
 use crate::application::error::AppError;
-use sqlx::{query, Executor, PgPool, Postgres};
+use sqlx::{query, Executor, Postgres};
 
 use super::Unit;
 

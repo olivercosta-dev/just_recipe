@@ -11,15 +11,14 @@ use super::{
     recipe_step::RecipeStep,
 };
 type SqlxError = sqlx::Error;
-// TODO (oliver): Update the documentation accordingly
 /// Inserts a recipe into the database.
 ///
-/// This function inserts a new recipe into the database. The recipe is provided as a `Recipe` instance,
-/// and the function returns the ID of the newly inserted recipe.
+/// This function inserts a new recipe into the database. The recipe details are provided
+/// as a `Recipe<I, NotBacked>` instance, and the function returns the ID of the newly inserted recipe.
 ///
 /// # Parameters
-/// - `recipe`: A reference to a `Recipe<I, BackedState>` instance containing the recipe details.
-/// - `transaction`: A mutable reference to a SQL transaction.
+/// - `recipe`: A reference to a `Recipe<I, NotBacked>` instance containing the recipe details.
+/// - `executor`: An executor that implements `Executor` for running the query. This can be a connection pool, a connection, or a transaction.
 ///
 /// # Returns
 /// - `Result<i32, AppError>`: A result containing the ID of the newly inserted recipe if the insertion is successful,
@@ -53,7 +52,7 @@ pub async fn insert_recipe<I: RecipeIngredient, NotBacked>(
 /// # Parameters
 /// - `ingredients`: A slice of `CompactRecipeIngredient` instances containing the ingredients to be inserted.
 /// - `recipe_id`: The ID of the recipe to which the ingredients belong.
-/// - `transaction`: A mutable reference to a SQL transaction.
+/// - `executor`: An executor that implements `Executor` for running the query. This can be a connection pool, a connection, or a transaction.
 ///
 /// # Returns
 /// - `Result<(), AppError>`: A result indicating success (`Ok(())`) or an error (`AppError`) if the insertion fails.
@@ -104,7 +103,7 @@ pub async fn bulk_insert_recipe_ingredients(
         Err(_) => Err(AppError::InternalServerError),
     }
 }
-
+// TODO(oliver): FIX DOCUMENTATION
 /// Bulk inserts steps into the database for a given recipe.
 ///
 /// This function inserts multiple steps into the database for a specified recipe ID in a single operation.

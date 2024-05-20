@@ -3,7 +3,7 @@ use sqlx::{query, Executor, PgPool, Postgres};
 use crate::application::error::AppError;
 
 use super::Ingredient;
-
+// TODO(oliver): FIX DOCUMENTATION + make it an executor!
 /// Inserts a new ingredient into the database.
 ///
 /// This function inserts a new ingredient into the database. The ingredient details are provided
@@ -78,7 +78,7 @@ pub async fn update_ingredient(
         _ => Ok(()),
     }
 }
-
+// TODO(oliver): FIX DOCUMENTATION + make it an executor
 /// Deletes an ingredient from the database by its ID.
 ///
 /// This function deletes an ingredient with the specified ingredient ID from the database.

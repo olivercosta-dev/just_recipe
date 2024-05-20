@@ -188,7 +188,6 @@ pub async fn fetch_unit(pool: &PgPool, unit_id: i32) -> Result<Unit, AppError> {
 /// This function returns an `AppError` if:
 /// - The query to fetch the recipe from the database fails.
 /// - The recipe with the specified ID is not found.
-// TODO (oliver): Make this general so that even non-detailed recipes can be fetched!
 pub async fn fetch_recipe_detailed(
     pool: &PgPool,
     recipe_id: i32,
