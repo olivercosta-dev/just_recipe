@@ -28,7 +28,7 @@
             "background": "#00FF00",
             "iconColour": "#00FF00",
             "fontWeight": "bold",
-            "gutterIcon": true
+            "gutterIcon": false
         },
         "OPTIMIZE": {
             "icon": "flame",
