@@ -1,6 +1,7 @@
+use core::panic;
 use std::{marker::PhantomData, ops::Not};
 
-use crate::application::error::{AppError, RecipeParsingError};
+use crate::{application::error::{AppError, RecipeParsingError}, utilities::{fetchers::fetch_ingredients_and_units, random_generation::{recipes::generate_random_recipe_ingredients, steps::generate_random_number_of_steps}}};
 use dashmap::DashSet;
 use fake::{Fake, Faker};
 use serde::{Deserialize, Serialize};
@@ -45,10 +46,8 @@ impl<I: RecipeIngredient, BackedState> Recipe<I, BackedState> {
         &self.steps
     }
 }
-// TODO (oliver): This doesn't seem correct.
-// Why would this be backed?
 // Specific implementations for Detailed & Backed recipes.
-impl Recipe<DetailedRecipeIngredient, Backed> {
+impl<BackedState> Recipe<DetailedRecipeIngredient, BackedState> {
     pub fn new(
         recipe_id: i32,
         name: String,
@@ -99,6 +98,56 @@ impl<BackedState> Recipe<CompactRecipeIngredient, BackedState> {
             }
         }
         Ok(self)
+    }
+    pub fn new(
+        recipe_id: i32,
+        name: String,
+        description: String,
+        ingredients: Vec<CompactRecipeIngredient>,
+        steps: Vec<RecipeStep>,
+    ) -> Recipe<CompactRecipeIngredient, Backed> {
+        Recipe {
+            recipe_id: Some(recipe_id),
+            name,
+            description,
+            ingredients,
+            steps,
+            backed_state: PhantomData,
+        }
+    }
+    pub async fn create_dummy_with_id(pool: &PgPool) -> Recipe<CompactRecipeIngredient, NotBacked> {
+        let recipe_id = Some(Faker.fake::<i32>());
+        let name = Faker.fake::<String>();
+        let description = Faker.fake::<String>();
+
+        let steps = generate_random_number_of_steps();
+        let (all_ingredients, all_units) = fetch_ingredients_and_units(&pool).await;
+        let ingredients = generate_random_recipe_ingredients(all_units, all_ingredients);
+        Recipe {
+            recipe_id,
+            name,
+            description,
+            ingredients,
+            steps,
+            backed_state: PhantomData
+        }
+    }
+    pub async fn create_dummy_without_id(pool: &PgPool) -> Recipe<CompactRecipeIngredient, NotBacked> {
+        let name = Faker.fake::<String>();
+        let description = Faker.fake::<String>();
+
+        let steps = generate_random_number_of_steps();
+        let (all_ingredients, all_units) = fetch_ingredients_and_units(&pool).await;
+        let ingredients = generate_random_recipe_ingredients(all_units, all_ingredients);
+
+        Recipe {
+            recipe_id: None,
+            name,
+            description,
+            ingredients,
+            steps,
+            backed_state: PhantomData
+        }
     }
 }
 

@@ -9,7 +9,7 @@ use crate::{
     application::{error::AppError, state::AppState},
     recipe::{
         helpers::{
-            bulk_insert_ingredients, bulk_insert_steps, delete_recipe_ingredients,
+            bulk_insert_recipe_ingredients, bulk_insert_steps, delete_recipe_ingredients,
             delete_recipe_steps, insert_recipe, update_recipe,
         },
         recipe::{Backed, NotBacked, Recipe},
@@ -52,9 +52,9 @@ pub async fn add_recipe_handler(
 ) -> Result<StatusCode, AppError> {
     let recipe = recipe.validate()?;
     let mut transaction = app_state.pool.begin().await?;
-    let recipe_id = insert_recipe(&recipe, &mut transaction).await?;
-    bulk_insert_ingredients(recipe.ingredients(), recipe_id, &mut transaction).await?;
-    bulk_insert_steps(recipe.steps(), recipe_id, &mut transaction).await?;
+    let recipe_id = insert_recipe(&recipe, &mut *transaction).await?;
+    bulk_insert_recipe_ingredients(recipe.ingredients(), recipe_id, &mut *transaction).await?;
+    bulk_insert_steps(recipe.steps(), recipe_id, &mut *transaction).await?;
     transaction.commit().await?;
     Ok(StatusCode::NO_CONTENT)
 }
@@ -92,8 +92,8 @@ pub async fn update_recipe_handler(
     update_recipe(recipe_id, recipe.name(), recipe.description(), &mut *transaction).await?;
     delete_recipe_ingredients(recipe_id, &app_state).await?;
     delete_recipe_steps(recipe_id, &app_state).await?;
-    bulk_insert_ingredients(recipe.ingredients(), recipe_id, &mut transaction).await?;
-    bulk_insert_steps(recipe.steps(), recipe_id, &mut transaction).await?;
+    bulk_insert_recipe_ingredients(recipe.ingredients(), recipe_id, &mut *transaction).await?;
+    bulk_insert_steps(recipe.steps(), recipe_id, &mut *transaction).await?;
     transaction.commit().await?;
     Ok(StatusCode::NO_CONTENT)
 }

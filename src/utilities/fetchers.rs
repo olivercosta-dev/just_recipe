@@ -7,7 +7,8 @@ use crate::{
     ingredient::Ingredient,
     recipe::{
         recipe::{Backed, Recipe},
-        recipe_ingredient::DetailedRecipeIngredient, recipe_step::RecipeStep,
+        recipe_ingredient::DetailedRecipeIngredient,
+        recipe_step::RecipeStep,
     },
     unit::Unit,
 };
@@ -136,8 +137,8 @@ pub async fn fetch_units_with_pagination(
 
 /// Fetches a unit from the database by its ID.
 ///
-/// This function queries the database to fetch a unit with the specified unit ID. 
-/// If the unit is found, it is returned as a `Unit` instance. If the unit is not found, 
+/// This function queries the database to fetch a unit with the specified unit ID.
+/// If the unit is found, it is returned as a `Unit` instance. If the unit is not found,
 /// it returns an `AppError::NotFound`.
 ///
 /// # Parameters
@@ -260,7 +261,13 @@ pub async fn fetch_recipe_detailed(
     )
     .fetch_all(pool)
     .await?;
-    let recipe = Recipe::new(recipe_id, name, description, detailed_ingredients, steps);
+    let recipe = Recipe::<DetailedRecipeIngredient>::new(
+        recipe_id,
+        name,
+        description,
+        detailed_ingredients,
+        steps,
+    );
     Ok(recipe)
 }
 
@@ -321,10 +328,7 @@ pub async fn fetch_ingredients_with_pagination(
 /// This function returns an `AppError` if:
 /// - The query to fetch the ingredient from the database fails.
 /// - The ingredient with the specified ID is not found.
-pub async fn fetch_ingredient(
-    pool: &PgPool,
-    ingredient_id: i32,
-) -> Result<Ingredient, AppError> {
+pub async fn fetch_ingredient(pool: &PgPool, ingredient_id: i32) -> Result<Ingredient, AppError> {
     let ingredient = sqlx::query_as!(
         Ingredient,
         r#"

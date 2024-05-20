@@ -53,7 +53,7 @@ pub async fn update_unit_handler(
     Path(unit_id): Path<i32>,
     Json(unit): Json<Unit>,
 ) -> Result<StatusCode, AppError> {
-    update_unit(&app_state.pool, unit_id, unit).await?;
+    update_unit(&app_state.pool, unit_id, &unit).await?;
     Ok(StatusCode::NO_CONTENT)
 }
 

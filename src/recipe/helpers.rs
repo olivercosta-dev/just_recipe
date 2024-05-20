@@ -6,12 +6,12 @@ use crate::application::{
 };
 
 use super::{
-    recipe::{Backed, Recipe},
+    recipe::{NotBacked, Recipe},
     recipe_ingredient::{CompactRecipeIngredient, RecipeIngredient},
     recipe_step::RecipeStep,
 };
 type SqlxError = sqlx::Error;
-
+// TODO (oliver): Update the documentation accordingly
 /// Inserts a recipe into the database.
 ///
 /// This function inserts a new recipe into the database. The recipe is provided as a `Recipe` instance,
@@ -28,9 +28,9 @@ type SqlxError = sqlx::Error;
 /// # Errors
 /// This function returns an `AppError` if:
 /// - The query to insert the recipe into the database fails.
-pub async fn insert_recipe<I: RecipeIngredient, BackedState>(
-    recipe: &Recipe<I, BackedState>,
-    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+pub async fn insert_recipe<I: RecipeIngredient, NotBacked>(
+    recipe: &Recipe<I, NotBacked>,
+    executor: impl Executor<'_, Database = Postgres>,
 ) -> Result<i32, AppError> {
     let recipe_query_result = sqlx::query!(
         r#"
@@ -39,7 +39,7 @@ pub async fn insert_recipe<I: RecipeIngredient, BackedState>(
         recipe.name(),
         recipe.description()
     )
-    .fetch_one(&mut **transaction)
+    .fetch_one(executor)
     .await?;
     Ok(recipe_query_result.recipe_id)
 }
@@ -63,10 +63,10 @@ pub async fn insert_recipe<I: RecipeIngredient, BackedState>(
 /// - The query to insert the ingredients into the database fails.
 /// - There is a foreign key violation (invalid ingredient ID).
 /// - There is a unique constraint violation (duplicate ingredient ID).
-pub async fn bulk_insert_ingredients(
+pub async fn bulk_insert_recipe_ingredients(
     ingredients: &[CompactRecipeIngredient],
     recipe_id: i32,
-    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    executor: impl Executor<'_, Database = Postgres>,
 ) -> sqlx::Result<(), AppError> {
     let ingr_ids: Vec<i32> = ingredients
         .iter()
@@ -91,7 +91,7 @@ pub async fn bulk_insert_ingredients(
         &unit_ids,
         &quants
     )
-    .execute(&mut **transaction)
+    .execute(executor)
     .await
     {
         Ok(_) => Ok(()),
@@ -125,7 +125,7 @@ pub async fn bulk_insert_ingredients(
 pub async fn bulk_insert_steps(
     steps: &[RecipeStep],
     recipe_id: i32,
-    transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
+    executor: impl Executor<'_, Database = Postgres>,
 ) -> Result<PgQueryResult, sqlx::Error> {
     let step_numbers: Vec<i32> = steps.iter().map(|step| step.step_number).collect();
     let instructions: Vec<String> = steps.iter().map(|step| step.instruction.clone()).collect();
@@ -140,7 +140,7 @@ pub async fn bulk_insert_steps(
         &step_numbers,
         &instructions
     )
-    .execute(&mut **transaction)
+    .execute(executor)
     .await?;
     Ok(query_result)
 }
@@ -253,6 +253,8 @@ pub async fn delete_recipe_ingredients(
 
 #[allow(unused)]
 mod test {
+    use std::ops::Not;
+
     use fake::{Fake, Faker};
     use sqlx::PgPool;
 
@@ -260,10 +262,21 @@ mod test {
         application::state::AppState,
         recipe::{
             self,
-            helpers::{delete_recipe_ingredients, delete_recipe_steps, update_recipe},
-            recipe::Recipe,
+            helpers::{
+                bulk_insert_recipe_ingredients, bulk_insert_steps, delete_recipe_ingredients,
+                delete_recipe_steps, insert_recipe, update_recipe,
+            },
+            recipe::{NotBacked, Recipe},
+            recipe_ingredient::{CompactRecipeIngredient, DetailedRecipeIngredient, RecipeIngredient},
         },
-        utilities::random_generation::recipes::choose_random_recipe_id,
+        utilities::{
+            fetchers::fetch_ingredients_and_units,
+            random_generation::{
+                ingredients,
+                recipes::{choose_random_recipe_id, generate_random_recipe_ingredients},
+                steps::generate_random_number_of_steps,
+            },
+        },
     };
 
     #[sqlx::test(fixtures(
@@ -322,6 +335,93 @@ mod test {
 
         assert_eq!(updated_record.name, new_name);
         assert_eq!(updated_record.description, new_description);
+
+        Ok(())
+    }
+
+    #[sqlx::test(fixtures(
+        path = "../../tests/fixtures",
+        scripts("recipes", "units", "ingredients")
+    ))]
+    async fn test_bulk_insert_ingredients(pool: PgPool) -> sqlx::Result<()> {
+        let recipe_id = choose_random_recipe_id(&pool).await;
+        let (all_ingredients, all_units) = fetch_ingredients_and_units(&pool).await;
+        let mut ingredients = generate_random_recipe_ingredients(all_units, all_ingredients);
+
+        bulk_insert_recipe_ingredients(&ingredients, recipe_id, &pool)
+            .await
+            .unwrap();
+
+        let mut inserted_ingredients = sqlx::query!(
+            "SELECT ingredient_id, unit_id, quantity FROM recipe_ingredient WHERE recipe_id = $1",
+            recipe_id
+        )
+        .fetch_all(&pool)
+        .await?;
+
+        // Sort both the expected and actual ingredients
+        ingredients.sort_by_key(|ing| ing.ingredient().clone());
+        inserted_ingredients.sort_by_key(|ing| ing.ingredient_id);
+
+        assert_eq!(inserted_ingredients.len(), ingredients.len());
+
+        for (expected, actual) in ingredients.iter().zip(inserted_ingredients.iter()) {
+            assert_eq!(actual.ingredient_id, *expected.ingredient());
+            assert_eq!(actual.unit_id, *expected.unit());
+            assert_eq!(actual.quantity, expected.quantity());
+        }
+
+        Ok(())
+    }
+
+    #[sqlx::test(fixtures(path = "../../tests/fixtures", scripts("recipes")))]
+    async fn test_bulk_insert_steps(pool: PgPool) -> sqlx::Result<()> {
+        let recipe_id = choose_random_recipe_id(&pool).await;
+
+        // Generate random steps to insert
+        let steps = generate_random_number_of_steps();
+
+        // Call the function to insert the steps
+        bulk_insert_steps(&steps, recipe_id, &pool).await.unwrap();
+
+        // Verify that the steps have been inserted
+        let mut inserted_steps = sqlx::query!(
+            "SELECT step_number, instruction FROM step WHERE recipe_id = $1 ORDER BY step_number",
+            recipe_id
+        )
+        .fetch_all(&pool)
+        .await?;
+
+        assert_eq!(inserted_steps.len(), steps.len());
+
+        // Sort both the expected and actual steps
+        let mut sorted_steps = steps.clone();
+        sorted_steps.sort_by_key(|step| step.step_number);
+
+        for (expected, actual) in sorted_steps.iter().zip(inserted_steps.iter()) {
+            assert_eq!(actual.step_number, expected.step_number);
+            assert_eq!(actual.instruction, expected.instruction);
+        }
+
+        Ok(())
+    }
+    
+    #[sqlx::test(fixtures(path = "../../tests/fixtures", scripts("ingredients","units")))]
+    async fn test_insert_recipe(pool: PgPool) -> sqlx::Result<()> {
+        let recipe: Recipe<CompactRecipeIngredient, NotBacked> = Recipe::<CompactRecipeIngredient>::create_dummy_without_id(&pool).await;
+        // Call the function to insert the recipe
+        let recipe_id = insert_recipe(&recipe, &pool).await.unwrap();
+
+        // Verify that the recipe has been inserted
+        let inserted_recipe = sqlx::query!(
+            "SELECT recipe_id, name, description FROM recipe WHERE recipe_id = $1",
+            recipe_id
+        )
+        .fetch_one(&pool)
+        .await?;
+
+        assert_eq!(inserted_recipe.name, recipe.name());
+        assert_eq!(inserted_recipe.description, recipe.description());
 
         Ok(())
     }

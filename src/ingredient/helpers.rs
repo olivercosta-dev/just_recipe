@@ -22,10 +22,7 @@ use super::Ingredient;
 /// This function returns an `AppError` if:
 /// - The query to insert the ingredient into the database fails.
 /// - The ingredient already exists (based on unique constraints).
-pub async fn insert_ingredient(
-    ingredient: &Ingredient,
-    pool: &PgPool,
-) -> Result<i32, AppError> {
+pub async fn insert_ingredient(ingredient: &Ingredient, pool: &PgPool) -> Result<i32, AppError> {
     match query!(
         r#"
             INSERT INTO ingredient (singular_name, plural_name) 
@@ -110,4 +107,99 @@ pub async fn delete_ingredient(ingredient_id: &i32, pool: &PgPool) -> Result<(),
         return Err(AppError::NotFound);
     }
     Ok(())
+}
+#[cfg(test)]
+mod tests {
+    use fake::{Fake, Faker};
+    use sqlx::{query, PgPool};
+
+    use crate::{
+        ingredient::{
+            helpers::{delete_ingredient, insert_ingredient, update_ingredient},
+            Ingredient,
+        },
+        utilities::random_generation::ingredients::choose_random_ingredient,
+    };
+    #[sqlx::test]
+    async fn test_insert_ingredient(pool: PgPool) -> sqlx::Result<()> {
+        let new_ingredient = Ingredient {
+            ingredient_id: None,
+            singular_name: Faker.fake::<String>(),
+            plural_name: "Test Ingredients".to_string(),
+        };
+
+        // Call the function to insert the ingredient
+        let ingredient_id = insert_ingredient(&new_ingredient, &pool).await.unwrap();
+
+        // Verify that the ingredient has been inserted
+        let inserted_ingredient = query!(
+            "SELECT singular_name, plural_name FROM ingredient WHERE ingredient_id = $1",
+            ingredient_id
+        )
+        .fetch_one(&pool)
+        .await?;
+
+        assert_eq!(
+            inserted_ingredient.singular_name,
+            new_ingredient.singular_name
+        );
+        assert_eq!(inserted_ingredient.plural_name, new_ingredient.plural_name);
+
+        Ok(())
+    }
+    #[sqlx::test(fixtures(path = "../../tests/fixtures", scripts("ingredients")))]
+    async fn test_update_ingredient(pool: PgPool) -> sqlx::Result<()> {
+        let ingredient_id = choose_random_ingredient(&pool)
+            .await
+            .ingredient_id
+            .expect("should have found ingredient in the database");
+        let updated_ingredient = Ingredient {
+            ingredient_id: Some(ingredient_id),
+            singular_name: Faker.fake::<String>(),
+            plural_name: "Test Ingredients".to_string(),
+        };
+
+        // Call the function to update the ingredient
+        update_ingredient(updated_ingredient.clone(), ingredient_id, &pool)
+            .await
+            .unwrap();
+
+        // Verify that the ingredient has been updated
+        let updated_record = query!(
+            "SELECT singular_name, plural_name FROM ingredient WHERE ingredient_id = $1",
+            ingredient_id
+        )
+        .fetch_one(&pool)
+        .await?;
+
+        assert_eq!(
+            updated_record.singular_name,
+            updated_ingredient.singular_name
+        );
+        assert_eq!(updated_record.plural_name, updated_ingredient.plural_name);
+
+        Ok(())
+    }
+    #[sqlx::test(fixtures(path = "../../tests/fixtures", scripts("ingredients")))]
+    async fn test_delete_ingredient(pool: PgPool) -> sqlx::Result<()> {
+        let ingredient_id = choose_random_ingredient(&pool)
+            .await
+            .ingredient_id
+            .expect("should have found ingredient in the database");
+
+        // Call the function to delete the ingredient
+        delete_ingredient(&ingredient_id, &pool).await.unwrap();
+
+        // Verify that the ingredient has been deleted
+        let deleted_ingredient = query!(
+            "SELECT ingredient_id FROM ingredient WHERE ingredient_id = $1",
+            ingredient_id
+        )
+        .fetch_optional(&pool)
+        .await?;
+
+        assert!(deleted_ingredient.is_none());
+
+        Ok(())
+    }
 }
