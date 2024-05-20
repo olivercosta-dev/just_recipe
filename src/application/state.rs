@@ -1,8 +1,10 @@
 use dashmap::DashSet;
 use sqlx::PgPool;
 
-// OPTIMIZE (oliver): Encapsulation could be better here.
-//  Attributes shouldn't be public!
+// NOTE : Attributes are public, 
+// NOTE : because AppState is just used in the router
+// NOTE : And it's always going to be cloned anyways, as it's cheap
+// NOTE : As it is an Arc<Mutex<T>>
 #[derive(Clone)]
 pub struct AppState {
     pub pool: PgPool,
