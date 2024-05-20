@@ -1,7 +1,6 @@
 use axum::{
     extract::{Path, Query, State},
     http::StatusCode,
-    response::IntoResponse,
     Json,
 };
 use serde::{Deserialize, Serialize};
@@ -11,11 +10,12 @@ use crate::{
     recipe::{
         helpers::{
             bulk_insert_ingredients, bulk_insert_steps, delete_recipe_ingredients,
-            delete_recipe_steps, fetch_recipe_from_db, insert_recipe, update_recipe_record,
+            delete_recipe_steps, insert_recipe, update_recipe,
         },
         recipe::{Backed, NotBacked, Recipe},
         recipe_ingredient::{CompactRecipeIngredient, DetailedRecipeIngredient},
-    }, utilities::queries::PaginationQuery,
+    },
+    utilities::{fetchers::fetch_recipe_detailed, queries::PaginationQuery},
 };
 
 /* Example request:
@@ -46,7 +46,7 @@ use crate::{
     ]
 }
 */
-pub async fn add_recipe(
+pub async fn add_recipe_handler(
     State(app_state): State<AppState>,
     Json(recipe): Json<Recipe<CompactRecipeIngredient, NotBacked>>,
 ) -> Result<StatusCode, AppError> {
@@ -65,7 +65,7 @@ pub struct RemoveRecipeRequest {
 }
 // NOTE (oliver): Deleting a recipe_id will cascade on a database level.
 // NOTE (oliver): That is why only that is deleted.
-pub async fn remove_recipe(
+pub async fn remove_recipe_handler(
     State(app_state): State<AppState>,
     Json(remove_recipe_request): Json<RemoveRecipeRequest>,
 ) -> Result<StatusCode, AppError> {
@@ -81,7 +81,7 @@ pub async fn remove_recipe(
     Ok(StatusCode::NO_CONTENT)
 }
 
-pub async fn update_recipe(
+pub async fn update_recipe_handler(
     State(app_state): State<AppState>,
     Path(recipe_id): Path<i32>,
     Json(recipe): Json<Recipe<CompactRecipeIngredient, NotBacked>>,
@@ -89,7 +89,7 @@ pub async fn update_recipe(
     let recipe: Recipe<CompactRecipeIngredient, Backed> =
         recipe.to_backed(&app_state.unit_ids, &app_state.ingredient_ids)?;
     let mut transaction = app_state.pool.begin().await?;
-    update_recipe_record(&recipe, recipe_id, &mut transaction).await?;
+    update_recipe(&recipe, recipe_id, &mut transaction).await?;
 
     delete_recipe_ingredients(recipe_id, &app_state).await?;
     delete_recipe_steps(recipe_id, &app_state).await?;
@@ -100,11 +100,11 @@ pub async fn update_recipe(
 }
 
 // TODO (oliver): Rename all the get routes
-pub async fn get_recipe(
+pub async fn get_recipe_handler(
     State(app_state): State<AppState>,
     Path(recipe_id): Path<i32>,
-) -> Result<impl IntoResponse, AppError> {
-    let recipe = fetch_recipe_from_db(&app_state.pool, recipe_id).await?;
+) -> Result<Json<Recipe<DetailedRecipeIngredient, Backed>>, AppError> {
+    let recipe = fetch_recipe_detailed(&app_state.pool, recipe_id).await?;
     Ok(Json(recipe))
 }
 
@@ -114,10 +114,10 @@ pub struct GetRecipesResponse {
     pub next_start_from: Option<i32>,
 }
 
-pub async fn get_recipe_by_query(
+pub async fn get_recipe_by_query_handler(
     State(state): State<AppState>,
     query: Query<PaginationQuery>,
-) -> Result<impl IntoResponse, AppError> {
+) -> Result<Json<GetRecipesResponse>, AppError> {
     if query.limit > 15 || query.limit < 1 {
         return Err(AppError::BadRequest);
     }
@@ -138,7 +138,7 @@ pub async fn get_recipe_by_query(
     let mut recipes: Vec<Recipe<DetailedRecipeIngredient, Backed>> = Vec::new();
 
     for recipe_id_record in recipe_ids {
-        let recipe = fetch_recipe_from_db(&state.pool, recipe_id_record.id).await?;
+        let recipe = fetch_recipe_detailed(&state.pool, recipe_id_record.id).await?;
         recipes.push(recipe);
     }
 

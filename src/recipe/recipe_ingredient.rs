@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::{ingredient::Ingredient, unit::Unit};
 
 /// The point of RecipeIngredient is that a RecipeIngredient
-/// Is (almost) always associated with a concrete (existing) recipe.
+/// Is (almost) always associated with a concrete (existing) recipe. <br>
 /// It is the glue between a recipe, an ingredient, a unit, and a quantity
 pub trait RecipeIngredient {
     type IngredientType;

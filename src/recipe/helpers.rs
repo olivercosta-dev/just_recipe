@@ -1,11 +1,33 @@
 use sqlx::{postgres::PgQueryResult, PgPool};
 
-use crate::{application::{error::{AppError, RecipeParsingError}, state::AppState}, ingredient::Ingredient, unit::Unit};
+use crate::application::{
+    error::{AppError, RecipeParsingError},
+    state::AppState,
+};
 
-use super::{recipe::{Backed, Recipe}, recipe_ingredient::{CompactRecipeIngredient, DetailedRecipeIngredient, RecipeIngredient}, recipe_step::RecipeStep};
+use super::{
+    recipe::{Backed, Recipe},
+    recipe_ingredient::{CompactRecipeIngredient, RecipeIngredient},
+    recipe_step::RecipeStep,
+};
 type SqlxError = sqlx::Error;
 
-// INSERT
+/// Inserts a recipe into the database.
+///
+/// This function inserts a new recipe into the database. The recipe is provided as a `Recipe` instance,
+/// and the function returns the ID of the newly inserted recipe.
+///
+/// # Parameters
+/// - `recipe`: A reference to a `Recipe<I, BackedState>` instance containing the recipe details.
+/// - `transaction`: A mutable reference to a SQL transaction.
+///
+/// # Returns
+/// - `Result<i32, AppError>`: A result containing the ID of the newly inserted recipe if the insertion is successful,
+///   or an `AppError` if an error occurs during the insertion.
+///
+/// # Errors
+/// This function returns an `AppError` if:
+/// - The query to insert the recipe into the database fails.
 pub async fn insert_recipe<I: RecipeIngredient, BackedState>(
     recipe: &Recipe<I, BackedState>,
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
@@ -21,6 +43,7 @@ pub async fn insert_recipe<I: RecipeIngredient, BackedState>(
     .await?;
     Ok(recipe_query_result.recipe_id)
 }
+
 // TODO (oliver): Unit test the utility functions
 pub async fn bulk_insert_ingredients(
     ingredients: &[CompactRecipeIngredient],
@@ -68,6 +91,23 @@ pub async fn bulk_insert_ingredients(
     }
 }
 
+/// Bulk inserts steps into the database for a given recipe.
+///
+/// This function inserts multiple steps into the database for a specified recipe ID in a single operation.
+/// The steps are provided as a slice of `RecipeStep` instances, and the function returns the result of the query execution.
+///
+/// # Parameters
+/// - `steps`: A slice of `RecipeStep` instances containing the steps to be inserted.
+/// - `recipe_id`: The ID of the recipe to which the steps belong.
+/// - `transaction`: A mutable reference to a SQL transaction.
+///
+/// # Returns
+/// - `Result<PgQueryResult, sqlx::Error>`: A result containing the `PgQueryResult` if the insertion is successful,
+///   or a `sqlx::Error` if an error occurs during the insertion.
+///
+/// # Errors
+/// This function returns a `sqlx::Error` if:
+/// - The query to insert the steps into the database fails.
 pub async fn bulk_insert_steps(
     steps: &[RecipeStep],
     recipe_id: i32,
@@ -91,85 +131,25 @@ pub async fn bulk_insert_steps(
     Ok(query_result)
 }
 
-// TODO (oliver): Make this general so that even non-detailed recipes can be fetched!
-pub async fn fetch_recipe_from_db(
-    pool: &PgPool,
-    recipe_id: i32,
-) -> Result<Recipe<DetailedRecipeIngredient, Backed>, AppError> {
-    let (name, description) = {
-        let record = sqlx::query!(
-            r#"
-            SELECT name, description
-            FROM recipe
-            WHERE recipe_id = $1
-        "#,
-            recipe_id
-        )
-        .fetch_optional(pool)
-        .await?;
-        if record.is_none() {
-            return Err(AppError::NotFound);
-        }
-        let record = record.unwrap();
-        (record.name, record.description)
-    };
-    let recipe_ingredient_records = sqlx::query!(
-        r#"
-            SELECT 
-                i.ingredient_id, 
-                i.singular_name,
-                i.plural_name,
-                u.unit_id,
-                u.singular_name as unit_singular,
-                u.plural_name as unit_plural,
-                quantity
-            FROM recipe_ingredient ri
-            LEFT JOIN ingredient i
-            ON ri.ingredient_id = i.ingredient_id
-            LEFT JOIN unit u
-            ON ri.unit_id = u.unit_id
-            WHERE recipe_id = $1
-        "#,
-        recipe_id
-    )
-    .fetch_all(pool)
-    .await?;
-
-    let mut detailed_ingredients: Vec<DetailedRecipeIngredient> = Vec::new();
-
-    for record in recipe_ingredient_records {
-        let ingredient = Ingredient {
-            ingredient_id: Some(record.ingredient_id),
-            singular_name: record.singular_name,
-            plural_name: record.plural_name,
-        };
-        let unit = Unit {
-            unit_id: Some(record.unit_id),
-            singular_name: record.unit_singular,
-            plural_name: record.unit_plural,
-        };
-        let detailed_ingredient =
-            DetailedRecipeIngredient::new(recipe_id, ingredient, unit, record.quantity);
-        detailed_ingredients.push(detailed_ingredient);
-    }
-    let steps = sqlx::query_as!(
-        RecipeStep,
-        r#"
-            SELECT step_id, recipe_id, step_number, instruction
-            FROM step
-            WHERE recipe_id = $1
-            ORDER BY step_number
-        "#,
-        recipe_id
-    )
-    .fetch_all(pool)
-    .await?;
-    let recipe = Recipe::new(recipe_id, name, description, detailed_ingredients, steps);
-    Ok(recipe)
-}
-
-// UPDATE
-pub async fn update_recipe_record<I: RecipeIngredient>(
+/// Updates a recipe in the database.
+///
+/// This function updates the name and description of a recipe with the specified recipe ID in the database.
+/// If the recipe with the specified ID is not found, it returns an `AppError::NotFound`.
+///
+/// # Parameters
+/// - `recipe`: A reference to a `Recipe<I, Backed>` instance containing the updated recipe details.
+/// - `recipe_id`: The ID of the recipe to update.
+/// - `transaction`: A mutable reference to a SQL transaction.
+///
+/// # Returns
+/// - `Result<(), AppError>`: Returns `Ok(())` if the update is successful,
+///   or an `AppError` if an error occurs during the update.
+///
+/// # Errors
+/// This function returns an `AppError` if:
+/// - The query to update the recipe in the database fails.
+/// - The recipe with the specified ID is not found.
+pub async fn update_recipe<I: RecipeIngredient>(
     recipe: &Recipe<I, Backed>,
     recipe_id: i32,
     transaction: &mut sqlx::Transaction<'_, sqlx::Postgres>,
@@ -192,8 +172,23 @@ pub async fn update_recipe_record<I: RecipeIngredient>(
     Ok(())
 }
 
-// DELETE
-// Delete all the step records for a given recipe_id
+/// Deletes all steps associated with a given recipe ID.
+///
+/// This function deletes all steps in the database associated with the specified recipe ID.
+/// If the operation is successful, it returns `Ok(())`. If an error occurs during the operation,
+/// it returns an `AppError`.
+///
+/// # Parameters
+/// - `recipe_id`: The ID of the recipe whose steps are to be deleted.
+/// - `app_state`: A reference to the application state containing the PostgreSQL connection pool.
+///
+/// # Returns
+/// - `Result<(), AppError>`: Returns `Ok(())` if the deletion is successful,
+///   or an `AppError` if an error occurs during the deletion.
+///
+/// # Errors
+/// This function returns an `AppError` if:
+/// - The query to delete the steps from the database fails.
 pub async fn delete_recipe_steps(recipe_id: i32, app_state: &AppState) -> Result<(), AppError> {
     sqlx::query!(
         r#"
@@ -207,8 +202,27 @@ pub async fn delete_recipe_steps(recipe_id: i32, app_state: &AppState) -> Result
     Ok(())
 }
 
-// Delete all the recipe_ingredient records for a given recipe_id
-pub async fn delete_recipe_ingredients(recipe_id: i32, app_state: &AppState) -> Result<(), AppError> {
+/// Deletes all ingredients associated with a given recipe ID.
+///
+/// This function deletes all ingredients in the database associated with the specified recipe ID.
+/// If the operation is successful, it returns `Ok(())`. If an error occurs during the operation,
+/// it returns an `AppError`.
+///
+/// # Parameters
+/// - `recipe_id`: The ID of the recipe whose ingredients are to be deleted.
+/// - `app_state`: A reference to the application state containing the PostgreSQL connection pool.
+///
+/// # Returns
+/// - `Result<(), AppError>`: Returns `Ok(())` if the deletion is successful,
+///   or an `AppError` if an error occurs during the deletion.
+///
+/// # Errors
+/// This function returns an `AppError` if:
+/// - The query to delete the ingredients from the database fails.
+pub async fn delete_recipe_ingredients(
+    recipe_id: i32,
+    app_state: &AppState,
+) -> Result<(), AppError> {
     sqlx::query!(
         r#"
             DELETE FROM recipe_ingredient 

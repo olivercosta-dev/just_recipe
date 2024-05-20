@@ -1,10 +1,10 @@
 use super::state::AppState;
 use crate::{
     routes::{
-        add_ingredient, add_recipe, add_unit, get_ingredient_by_id, get_ingredients_by_query,
-        get_recipe, get_recipe_by_query, get_unit, get_units_by_query, health_check,
-        remove_ingredient, remove_recipe, remove_unit, update_ingredient, update_recipe,
-        update_unit,
+        add_ingredient_handler, add_recipe_handler, add_unit_handler, get_ingredient_by_id_handler, get_ingredients_by_query_handler,
+        get_recipe_handler, get_recipe_by_query_handler, get_unit_handler, get_units_by_query_handler, health_check,
+        remove_ingredient_handler, remove_recipe_handler, remove_unit_handler, update_ingredient_handler, update_recipe_handler,
+        update_unit_handler,
     },
     utilities::fetchers::{fetch_all_ingredient_ids, fetch_all_unit_ids},
 };
@@ -54,26 +54,26 @@ impl App {
             .route("/", get(health_check))
             .route(
                 "/units",
-                post(add_unit).delete(remove_unit).get(get_units_by_query),
+                post(add_unit_handler).delete(remove_unit_handler).get(get_units_by_query_handler),
             )
-            .route("/units/:unit_id", put(update_unit).get(get_unit))
+            .route("/units/:unit_id", put(update_unit_handler).get(get_unit_handler))
             .route(
                 "/ingredients",
-                post(add_ingredient)
-                    .delete(remove_ingredient)
-                    .get(get_ingredients_by_query),
+                post(add_ingredient_handler)
+                    .delete(remove_ingredient_handler)
+                    .get(get_ingredients_by_query_handler),
             )
             .route(
                 "/ingredients/:ingredient_id",
-                put(update_ingredient).get(get_ingredient_by_id),
+                put(update_ingredient_handler).get(get_ingredient_by_id_handler),
             )
             .route(
                 "/recipes",
-                post(add_recipe)
-                    .delete(remove_recipe)
-                    .get(get_recipe_by_query),
+                post(add_recipe_handler)
+                    .delete(remove_recipe_handler)
+                    .get(get_recipe_by_query_handler),
             )
-            .route("/recipes/:recipe_id", put(update_recipe).get(get_recipe))
+            .route("/recipes/:recipe_id", put(update_recipe_handler).get(get_recipe_handler))
             .layer(CatchPanicLayer::new())
             .with_state(state)
     }
