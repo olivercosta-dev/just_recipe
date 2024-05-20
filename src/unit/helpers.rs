@@ -1,5 +1,5 @@
-use sqlx::{query, PgPool};
 use crate::application::error::AppError;
+use sqlx::{query, Executor, PgPool, Postgres};
 
 use super::Unit;
 
@@ -9,7 +9,7 @@ use super::Unit;
 /// If the unit with the specified ID is not found, it returns an `AppError::NotFound`.
 ///
 /// # Parameters
-/// - `pool`: A reference to the PostgreSQL connection pool (`PgPool`).
+/// - `executor`: Something the implements the Executor trait.
 /// - `unit_id`: The ID of the unit to update.
 /// - `unit`: A `Unit` instance containing the updated unit details.
 ///
@@ -21,7 +21,11 @@ use super::Unit;
 /// This function returns an `AppError` if:
 /// - The query to update the unit fails.
 /// - The unit with the specified ID is not found.
-pub async fn update_unit(pool: &PgPool, unit_id: i32, unit: Unit) -> Result<(), AppError> {
+pub async fn update_unit(
+    executor: impl Executor<'_, Database = Postgres>,
+    unit_id: i32,
+    unit: Unit,
+) -> Result<(), AppError> {
     match sqlx::query!(
         "UPDATE unit SET singular_name = $1, plural_name = $2 WHERE unit_id = $3",
         unit.singular_name,
@@ -46,7 +50,6 @@ pub async fn delete_unit(unit_id: &i32, pool: &PgPool) -> Result<(), AppError> {
     }
     Ok(())
 }
-
 
 pub async fn insert_unit(unit: &Unit, pool: &PgPool) -> Result<i32, AppError> {
     match query!(

@@ -1,7 +1,8 @@
-use std::marker::PhantomData;
+use std::{marker::PhantomData, ops::Not};
 
 use crate::application::error::{AppError, RecipeParsingError};
 use dashmap::DashSet;
+use fake::{Fake, Faker};
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 
@@ -44,7 +45,8 @@ impl<I: RecipeIngredient, BackedState> Recipe<I, BackedState> {
         &self.steps
     }
 }
-
+// TODO (oliver): This doesn't seem correct.
+// Why would this be backed?
 // Specific implementations for Detailed & Backed recipes.
 impl Recipe<DetailedRecipeIngredient, Backed> {
     pub fn new(

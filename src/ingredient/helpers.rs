@@ -1,4 +1,4 @@
-use sqlx::{query, PgPool};
+use sqlx::{query, Executor, PgPool, Postgres};
 
 use crate::application::error::AppError;
 
@@ -52,7 +52,7 @@ pub async fn insert_ingredient(
 /// # Parameters
 /// - `ingredient`: An `Ingredient` instance containing the updated ingredient details.
 /// - `ingredient_id`: The ID of the ingredient to update.
-/// - `pool`: A reference to the PostgreSQL connection pool (`PgPool`).
+/// - `executor`: Something the implements the Executor trait.
 ///
 /// # Returns
 /// - `Result<(), AppError>`: Returns `Ok(())` if the update is successful,
@@ -65,7 +65,7 @@ pub async fn insert_ingredient(
 pub async fn update_ingredient(
     ingredient: Ingredient,
     ingredient_id: i32,
-    pool: &PgPool,
+    executor: impl Executor<'_, Database = Postgres>,
 ) -> Result<(), AppError> {
     match sqlx::query!(
         "UPDATE ingredient SET singular_name = $1, plural_name = $2 WHERE ingredient_id = $3",
@@ -73,7 +73,7 @@ pub async fn update_ingredient(
         ingredient.plural_name,
         ingredient_id,
     )
-    .execute(pool)
+    .execute(executor)
     .await
     {
         Ok(result) if result.rows_affected() == 0 => Err(AppError::NotFound),

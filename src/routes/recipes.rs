@@ -89,8 +89,7 @@ pub async fn update_recipe_handler(
     let recipe: Recipe<CompactRecipeIngredient, Backed> =
         recipe.to_backed(&app_state.unit_ids, &app_state.ingredient_ids)?;
     let mut transaction = app_state.pool.begin().await?;
-    update_recipe(&recipe, recipe_id, &mut transaction).await?;
-
+    update_recipe(recipe_id, recipe.name(), recipe.description(), &mut *transaction).await?;
     delete_recipe_ingredients(recipe_id, &app_state).await?;
     delete_recipe_steps(recipe_id, &app_state).await?;
     bulk_insert_ingredients(recipe.ingredients(), recipe_id, &mut transaction).await?;
