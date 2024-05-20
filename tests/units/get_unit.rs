@@ -106,7 +106,7 @@ async fn getting_units_returns_units_200_ok(pool: PgPool) -> sqlx::Result<()> {
     Ok(())
 }
 
-#[sqlx::test(fixtures(path = "../fixtures", scripts("ingredients")))]
+#[sqlx::test]
 async fn getting_units_with_wrong_parameters_returns_404_bad_request(pool: PgPool) -> sqlx::Result<()> {
     let app_state = AppState::new(pool);
     let app = App::new(app_state.clone(), default::Default::default(), 0).await;

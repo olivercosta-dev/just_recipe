@@ -117,7 +117,7 @@ async fn getting_ingredients_returns_ingredients_200_ok(pool: PgPool) -> sqlx::R
     Ok(())
 }
 
-#[sqlx::test(fixtures(path = "../fixtures", scripts("ingredients")))]
+#[sqlx::test]
 async fn getting_ingredients_with_wrong_parameters_returns_404_bad_request(pool: PgPool) -> sqlx::Result<()> {
     let app_state = AppState::new(pool);
     let app = App::new(app_state.clone(), default::Default::default(), 0).await;

@@ -1,7 +1,7 @@
 use std::{collections::HashSet, default};
 
 use axum::{body::to_bytes, http::StatusCode};
-use fake::Fake;
+use fake::{Fake, Faker};
 use just_recipe::{
     application::{app::App, state::AppState},
     recipe::{
@@ -139,6 +139,20 @@ async fn getting_recipes_returns_recipes_200_ok(pool: PgPool) -> sqlx::Result<()
             start_from = response_recipes.next_start_from;
         }
     }
+
+    Ok(())
+}
+
+
+#[sqlx::test]
+async fn getting_recipes_with_wrong_parameters_returns_404_bad_request(pool: PgPool) -> sqlx::Result<()> {
+    let app_state = AppState::new(pool);
+    let app = App::new(app_state.clone(), default::Default::default(), 0).await;
+    let query_params: Option<String> = Some(format!("{}={}", Faker.fake::<String>(), Faker.fake::<String>()));
+    let json = json!({});
+    let request = create_get_request_to("recipes", None, query_params, json);
+    let response = app.router.clone().oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 
     Ok(())
 }
