@@ -34,7 +34,11 @@ impl App {
         let router = Self::create_router(state);
         App { url, port, router }
     }
-    // OPTIMIZE (oliver): This can panic!
+
+    /// Initializes the cache inside AppState
+    /// and returns the new one with the included cache.
+    /// 
+    /// <b>Note: This function might panic! Initializing the cache is crucial!</b>
     async fn init_cache(state: AppState) -> AppState {
         let unit_ids = fetch_all_unit_ids(&state.pool)
             .await
