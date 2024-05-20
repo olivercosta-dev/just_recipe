@@ -85,7 +85,6 @@ async fn getting_non_existent_recipe_returns_404_not_found(pool: PgPool) -> sqlx
     Ok(())
 }
 
-// TODO (oliver) Make all the sad paths!
 #[sqlx::test(fixtures(path = "../fixtures", scripts("units")))]
 async fn getting_recipes_returns_recipes_200_ok(pool: PgPool) -> sqlx::Result<()> {
     let app_state = AppState::new(pool);

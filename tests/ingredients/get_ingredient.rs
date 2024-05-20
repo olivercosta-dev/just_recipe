@@ -1,7 +1,7 @@
 use std::default;
 
 use axum::{body::to_bytes, http::StatusCode};
-use fake::Fake;
+use fake::{Fake, Faker};
 use just_recipe::{
     application::{app::App, state::AppState},
     ingredient::Ingredient,
@@ -113,6 +113,19 @@ async fn getting_ingredients_returns_ingredients_200_ok(pool: PgPool) -> sqlx::R
             start_from = response_ingredients.next_start_from;
         }
     }
+
+    Ok(())
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("ingredients")))]
+async fn getting_ingredients_with_wrong_parameters_returns_404_bad_request(pool: PgPool) -> sqlx::Result<()> {
+    let app_state = AppState::new(pool);
+    let app = App::new(app_state.clone(), default::Default::default(), 0).await;
+    let query_params: Option<String> = Some(format!("{}={}", Faker.fake::<String>(), Faker.fake::<String>()));
+    let json = json!({});
+    let request = create_get_request_to("ingredients", None, query_params, json);
+    let response = app.router.clone().oneshot(request).await.unwrap();
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 
     Ok(())
 }
