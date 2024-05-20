@@ -1,4 +1,3 @@
-
 use fake::{Fake, Faker};
 
 use crate::recipe::recipe_step::RecipeStep;

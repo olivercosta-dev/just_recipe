@@ -7,4 +7,3 @@ pub struct Ingredient {
     pub singular_name: String,
     pub plural_name: String,
 }
-

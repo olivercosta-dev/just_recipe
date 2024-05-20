@@ -8,12 +8,19 @@ use just_recipe::{
         recipe::Recipe,
         recipe_ingredient::{DetailedRecipeIngredient, RecipeIngredient},
     },
-    routes::GetRecipesResponse, utilities::{assertions::{assert_detailed_ingredients_exist, assert_ingredients_exist, assert_recipe_exists, assert_recipe_steps_exist}, random_generation::recipes::choose_random_recipe_id, request_creators::create_get_request_to},
+    routes::GetRecipesResponse,
+    utilities::{
+        assertions::{
+            assert_detailed_ingredients_exist, assert_ingredients_exist, assert_recipe_exists,
+            assert_recipe_steps_exist,
+        },
+        random_generation::recipes::choose_random_recipe_id,
+        request_creators::create_get_request_to,
+    },
 };
 use serde_json::json;
 use sqlx::PgPool;
 use tower::ServiceExt;
-
 
 #[sqlx::test(fixtures(
     path = "../fixtures",
@@ -48,7 +55,9 @@ async fn getting_existing_recipe_returns_recipe_and_200_ok(pool: PgPool) -> sqlx
         recipe_id_in_db
     );
 
-    assert_recipe_steps_exist(&app_state.pool, response_recipe.steps(), recipe_id).await.unwrap();
+    assert_recipe_steps_exist(&app_state.pool, response_recipe.steps(), recipe_id)
+        .await
+        .unwrap();
     assert_ingredients_exist(
         &app_state.pool,
         response_recipe

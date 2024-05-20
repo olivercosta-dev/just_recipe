@@ -1,8 +1,8 @@
 mod health_check;
-mod units;
 mod ingredients;
 mod recipes;
-pub use units::*;
+mod units;
+pub use health_check::*;
 pub use ingredients::*;
 pub use recipes::*;
-pub use health_check::*;
+pub use units::*;

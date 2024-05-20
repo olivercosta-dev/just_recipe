@@ -54,7 +54,6 @@ pub async fn fetch_all_ingredient_ids(pool: &PgPool) -> Option<DashSet<i32>> {
     Some(ingredients)
 }
 
-
 /// Fetches all ingredients and units from the database.
 ///
 /// This function queries the database to fetch all records from the `ingredient` and `unit` tables.

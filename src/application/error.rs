@@ -6,8 +6,8 @@ use axum::{
 #[derive(Debug, PartialEq)]
 pub enum AppError {
     InternalServerError, // DB errors for the most part
-    NotFound, // resource not found
-    Conflict, // resource already exists
+    NotFound,            // resource not found
+    Conflict,            // resource already exists
     BadRequest,
     RecipeParsingError(RecipeParsingError),
 }

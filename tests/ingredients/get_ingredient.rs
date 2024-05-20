@@ -5,7 +5,11 @@ use fake::Fake;
 use just_recipe::{
     application::{app::App, state::AppState},
     ingredient::Ingredient,
-    routes::GetIngredientsResponse, utilities::{random_generation::ingredients::choose_random_ingredient, request_creators::create_get_request_to},
+    routes::GetIngredientsResponse,
+    utilities::{
+        random_generation::ingredients::choose_random_ingredient,
+        request_creators::create_get_request_to,
+    },
 };
 use serde_json::json;
 use sqlx::PgPool;
@@ -96,7 +100,7 @@ async fn getting_ingredients_returns_ingredients_200_ok(pool: PgPool) -> sqlx::R
 
         let response_ingredients: GetIngredientsResponse =
             serde_json::from_slice(&bytes).expect("Failed to deserialize JSON");
-     
+
         assert!(response_ingredients.ingredients.len() as i64 <= limit);
         let start_id = if let Some(start_id) = start_from {
             start_id

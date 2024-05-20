@@ -23,7 +23,7 @@ pub struct CompactRecipeIngredient {
     pub(crate) quantity: String,
 }
 // This is so recipe_id doesn't get flagged
-#[allow(dead_code)] 
+#[allow(dead_code)]
 #[derive(Serialize, Deserialize)]
 pub struct DetailedRecipeIngredient {
     #[serde(skip)]

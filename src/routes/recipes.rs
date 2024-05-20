@@ -374,7 +374,9 @@ pub async fn get_recipe_by_query(
             None
         } else {
             // Remove one element as the fetching overallocated by 1
-            recipes.pop().and_then(|rec: Recipe<DetailedRecipeIngredient, Backed>| rec.recipe_id())
+            recipes
+                .pop()
+                .and_then(|rec: Recipe<DetailedRecipeIngredient, Backed>| rec.recipe_id())
         }
     };
     let response = GetRecipesResponse {

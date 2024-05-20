@@ -3,17 +3,19 @@ use std::collections::HashSet;
 use fake::{Fake, Faker};
 use sqlx::PgPool;
 
-use crate::{ingredient::Ingredient, recipe::recipe_ingredient::CompactRecipeIngredient, unit::Unit};
+use crate::{
+    ingredient::Ingredient, recipe::recipe_ingredient::CompactRecipeIngredient, unit::Unit,
+};
 
 /// Generates a random number of `CompactRecipeIngredient` instances from the given units and ingredients.
 ///
 /// This function generates a random number of `CompactRecipeIngredient` instances. Each ingredient is paired
 /// with a random unit, and all ingredients are guaranteed to be unique within the generated list.
-/// 
+///
 /// # Parameters
 /// - `units`: A vector of `Unit` instances to choose from.
 /// - `ingredients`: A vector of `Ingredient` instances to choose from.
-/// 
+///
 /// # Returns
 /// - `Vec<CompactRecipeIngredient>`: A vector containing the generated `CompactRecipeIngredient` instances.
 ///

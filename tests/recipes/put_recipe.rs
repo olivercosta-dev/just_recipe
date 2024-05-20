@@ -10,7 +10,13 @@ use just_recipe::{
         assertions::{
             assert_compact_recipe_ingredients_exist, assert_recipe_exists,
             assert_recipe_steps_exist,
-        }, fetchers::fetch_ingredients_and_units, random_generation::{recipes::{choose_random_recipe_id, generate_random_recipe_ingredients}, steps::generate_random_number_of_steps}, request_creators::create_put_request_to
+        },
+        fetchers::fetch_ingredients_and_units,
+        random_generation::{
+            recipes::{choose_random_recipe_id, generate_random_recipe_ingredients},
+            steps::generate_random_number_of_steps,
+        },
+        request_creators::create_put_request_to,
     },
 };
 use serde_json::json;

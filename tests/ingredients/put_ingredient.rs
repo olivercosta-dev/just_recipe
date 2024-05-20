@@ -2,7 +2,14 @@ use std::default;
 
 use axum::http::StatusCode;
 use fake::{Fake, Faker};
-use just_recipe::{application::{app::App, state::AppState}, ingredient::Ingredient, utilities::{random_generation::ingredients::choose_random_ingredient, request_creators::create_put_request_to}};
+use just_recipe::{
+    application::{app::App, state::AppState},
+    ingredient::Ingredient,
+    utilities::{
+        random_generation::ingredients::choose_random_ingredient,
+        request_creators::create_put_request_to,
+    },
+};
 use serde_json::json;
 use sqlx::PgPool;
 use tower::ServiceExt;
@@ -13,7 +20,7 @@ async fn updating_existing_ingredient_gets_updated_returns_204_no_content(
 ) -> sqlx::Result<()> {
     let app_state = AppState::new(pool);
     let app = App::new(app_state.clone(), default::Default::default(), 0).await;
-    
+
     let ingredient_id = choose_random_ingredient(&app_state.pool)
         .await
         .ingredient_id

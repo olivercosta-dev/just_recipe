@@ -1,3 +1,3 @@
 For integration tests:
 run
-cargo test --test utils -- TEST_FOLDER_NAME
+cargo test --test tests -- TEST_FOLDER_NAME

@@ -1,7 +1,12 @@
 use std::default;
 
 use axum::http::StatusCode;
-use just_recipe::{application::{app::App, state::AppState}, utilities::{random_generation::units::choose_random_unit, request_creators::create_delete_request_to}};
+use just_recipe::{
+    application::{app::App, state::AppState},
+    utilities::{
+        random_generation::units::choose_random_unit, request_creators::create_delete_request_to,
+    },
+};
 use serde_json::json;
 use sqlx::PgPool;
 use tower::ServiceExt;
@@ -35,6 +40,3 @@ async fn deleting_non_existent_unit_returns_404_not_found(pool: PgPool) -> sqlx:
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
     Ok(())
 }
-
-
-
