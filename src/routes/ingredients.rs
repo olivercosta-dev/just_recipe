@@ -9,7 +9,7 @@ use sqlx::{query, PgPool};
 
 use crate::{
     application::{error::AppError, state::AppState},
-    ingredient::Ingredient,
+    ingredient::{helpers::fetch_ingredients_from_db, Ingredient}, utilities::queries::PaginationQuery,
 };
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -141,16 +141,10 @@ pub struct GetIngredientsResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub next_start_from: Option<i32>,
 }
-#[derive(Serialize, Deserialize, Debug)]
-pub struct IngredientsQuery {
-    limit: i64,
-    // Default start_id is 0
-    #[serde(default)]
-    start_from: i32,
-}
+
 pub async fn get_ingredients_by_query(
     State(app_state): State<AppState>,
-    query: Query<IngredientsQuery>,
+    query: Query<PaginationQuery>,
 ) -> Result<impl IntoResponse, AppError> {
     if query.limit > 15 || query.limit < 1 {
         return Err(AppError::BadRequest);
@@ -172,25 +166,4 @@ pub async fn get_ingredients_by_query(
         next_start_from,
     };
     Ok(Json(response))
-}
-
-/// Fetches exactly ONE MORE ingredient than in the query!
-async fn fetch_ingredients_from_db(
-    query: &Query<IngredientsQuery>,
-    pool: &PgPool,
-) -> Result<Vec<Ingredient>, AppError> {
-    let result = sqlx::query_as!(
-        Ingredient,
-        r#" SELECT * 
-            FROM ingredient
-            WHERE ingredient_id >= $1
-            ORDER BY ingredient_id
-            LIMIT $2;
-        "#,
-        query.start_from,
-        (query.limit + 1),
-    )
-    .fetch_all(pool)
-    .await?;
-    Ok(result)
 }

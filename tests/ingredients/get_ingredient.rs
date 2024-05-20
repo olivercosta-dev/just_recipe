@@ -55,7 +55,6 @@ async fn getting_non_existent_ingredient_returns_404_not_found(pool: PgPool) -> 
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
     Ok(())
 }
-// TODO (oliver) Make all the sad paths!
 #[sqlx::test(fixtures(path = "../fixtures", scripts("ingredients")))]
 async fn getting_ingredients_returns_ingredients_200_ok(pool: PgPool) -> sqlx::Result<()> {
     let app_state = AppState::new(pool);

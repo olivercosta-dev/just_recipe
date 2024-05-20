@@ -9,7 +9,8 @@ use sqlx::{query, PgPool};
 
 use crate::{
     application::{error::AppError, state::AppState},
-    unit::Unit,
+    unit::{helpers::{fetch_unit_from_db, fetch_units_from_db}, Unit},
+    utilities::queries::PaginationQuery,
 };
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -101,21 +102,7 @@ pub async fn get_unit(
     let unit = fetch_unit_from_db(&app_state.pool, unit_id).await?;
     Ok(Json(unit))
 }
-async fn fetch_unit_from_db(pool: &PgPool, unit_id: i32) -> Result<Unit, AppError> {
-    let unit = sqlx::query_as!(
-        Unit,
-        r#"
-            SELECT * 
-            FROM unit
-            WHERE unit_id = $1
-        "#,
-        unit_id
-    )
-    .fetch_optional(pool)
-    .await?
-    .ok_or(AppError::NotFound)?;
-    Ok(unit)
-}
+
 
 #[derive(Serialize, Deserialize)]
 pub struct GetUnitsResponse {
@@ -126,17 +113,10 @@ pub struct GetUnitsResponse {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub next_start_from: Option<i32>,
 }
-#[derive(Serialize, Deserialize, Debug)]
-pub struct UnitsQuery {
-    limit: i64,
-    // Default start_id is 0
-    #[serde(default)]
-    start_from: i32,
-}
 
 pub async fn get_units_by_query(
     State(app_state): State<AppState>,
-    query: Query<UnitsQuery>,
+    query: Query<PaginationQuery>,
 ) -> Result<impl IntoResponse, AppError> {
     if query.limit > 15 || query.limit < 1 {
         return Err(AppError::BadRequest);
@@ -157,24 +137,4 @@ pub async fn get_units_by_query(
         next_start_from,
     };
     Ok(Json(response))
-}
-
-async fn fetch_units_from_db(
-    query: &Query<UnitsQuery>,
-    pool: &PgPool,
-) -> Result<Vec<Unit>, AppError> {
-    let result = sqlx::query_as!(
-        Unit,
-        r#" SELECT * 
-            FROM unit
-            WHERE unit_id >= $1
-            ORDER BY unit_id
-            LIMIT $2
-        "#,
-        query.start_from,
-        query.limit + 1,
-    )
-    .fetch_all(pool)
-    .await?;
-    Ok(result)
 }

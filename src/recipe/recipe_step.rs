@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+// RecipeStep is in this folder, because it only exists in the realm 
+// of a recipe, and never outside.
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct RecipeStep {
     #[serde(skip)]
