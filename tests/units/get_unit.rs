@@ -7,7 +7,7 @@ use just_recipe::{
     routes::GetUnitsResponse,
     unit::Unit,
     utilities::{
-        random_generation::units::choose_random_unit, request_creators::create_get_request_to,
+        assertions::assert_units_match, random_generation::units::choose_random_unit, request_creators::create_get_request_to
     },
 };
 use serde_json::json;
@@ -106,35 +106,3 @@ async fn getting_units_returns_units_200_ok(pool: PgPool) -> sqlx::Result<()> {
     Ok(())
 }
 
-fn assert_units_match(left_units: &[Unit], right_units: &[Unit]) {
-    // Ensure both unit slices are sorted by unit_id
-    let mut left_sorted = left_units.to_vec();
-    let mut right_sorted = right_units.to_vec();
-
-    left_sorted.sort_by_key(|unit| unit.unit_id);
-    right_sorted.sort_by_key(|unit| unit.unit_id);
-
-    assert_eq!(
-        left_sorted.len(),
-        right_sorted.len(),
-        "The number of ingredients does not match."
-    );
-
-    for (left, right) in left_sorted.iter().zip(right_sorted.iter()) {
-        assert_eq!(
-            left.unit_id, right.unit_id,
-            "Unit ID mismatch: left = {:?}, right = {:?}",
-            left, right
-        );
-        assert_eq!(
-            left.singular_name, right.singular_name,
-            "Singular name mismatch: left = {:?}, right = {:?}",
-            left, right
-        );
-        assert_eq!(
-            left.plural_name, right.plural_name,
-            "Plural name mismatch: left = {:?}, right = {:?}",
-            left, right
-        );
-    }
-}

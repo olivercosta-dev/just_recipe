@@ -7,8 +7,7 @@ use just_recipe::{
     ingredient::Ingredient,
     routes::GetIngredientsResponse,
     utilities::{
-        random_generation::ingredients::choose_random_ingredient,
-        request_creators::create_get_request_to,
+        assertions::assert_ingredients_match, random_generation::ingredients::choose_random_ingredient, request_creators::create_get_request_to
     },
 };
 use serde_json::json;
@@ -56,26 +55,6 @@ async fn getting_non_existent_ingredient_returns_404_not_found(pool: PgPool) -> 
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
     Ok(())
 }
-// The desired behavior:
-// 1.) Sending a GET request to /ingredients returns
-//     a.) List of n (0 <= n <= 15) ingredients (sorted by id)
-//     b.) The next id to query from
-//     c.) 200 OK
-//     d.) Query Params: limit and start_from
-// 2.) The response JSON Format,
-//     for request at /ingredients,
-//     limit is mandatory.
-// {
-//   ingredients: [
-//      {
-//        ingredient_id: 1,
-//        singular_name: "Apple"
-//        plural_name: "Apples"
-//      },
-//      ...
-//   ]
-//   next: "start_from=5&limit=15"
-// }
 // TODO (oliver) Make all the sad paths!
 #[sqlx::test(fixtures(path = "../fixtures", scripts("ingredients")))]
 async fn getting_ingredients_returns_ingredients_200_ok(pool: PgPool) -> sqlx::Result<()> {
@@ -136,37 +115,4 @@ async fn getting_ingredients_returns_ingredients_200_ok(pool: PgPool) -> sqlx::R
     }
 
     Ok(())
-}
-
-fn assert_ingredients_match(left_ingredients: &[Ingredient], right_ingredients: &[Ingredient]) {
-    // Ensure both ingredient slices are sorted by ingredient_id
-    let mut left_sorted = left_ingredients.to_vec();
-    let mut right_sorted = right_ingredients.to_vec();
-
-    left_sorted.sort_by_key(|ingredient| ingredient.ingredient_id);
-    right_sorted.sort_by_key(|ingredient| ingredient.ingredient_id);
-
-    assert_eq!(
-        left_sorted.len(),
-        right_sorted.len(),
-        "The number of ingredients does not match."
-    );
-
-    for (left, right) in left_sorted.iter().zip(right_sorted.iter()) {
-        assert_eq!(
-            left.ingredient_id, right.ingredient_id,
-            "Ingredient ID mismatch: left = {:?}, right = {:?}",
-            left, right
-        );
-        assert_eq!(
-            left.singular_name, right.singular_name,
-            "Singular name mismatch: left = {:?}, right = {:?}",
-            left, right
-        );
-        assert_eq!(
-            left.plural_name, right.plural_name,
-            "Plural name mismatch: left = {:?}, right = {:?}",
-            left, right
-        );
-    }
 }

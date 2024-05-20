@@ -6,7 +6,7 @@ use crate::{
     recipe::{
         recipe_ingredient::{CompactRecipeIngredient, DetailedRecipeIngredient, RecipeIngredient},
         recipe_step::RecipeStep,
-    },
+    }, unit::Unit,
 };
 
 /// Asserts that a recipe with the specified name and description exists in the database.
@@ -265,4 +265,70 @@ pub async fn assert_recipe_steps_exist(
     }
 
     Ok(())
+}
+
+pub fn assert_ingredients_match(left_ingredients: &[Ingredient], right_ingredients: &[Ingredient]) {
+    // Ensure both ingredient slices are sorted by ingredient_id
+    let mut left_sorted = left_ingredients.to_vec();
+    let mut right_sorted = right_ingredients.to_vec();
+
+    left_sorted.sort_by_key(|ingredient| ingredient.ingredient_id);
+    right_sorted.sort_by_key(|ingredient| ingredient.ingredient_id);
+
+    assert_eq!(
+        left_sorted.len(),
+        right_sorted.len(),
+        "The number of ingredients does not match."
+    );
+
+    for (left, right) in left_sorted.iter().zip(right_sorted.iter()) {
+        assert_eq!(
+            left.ingredient_id, right.ingredient_id,
+            "Ingredient ID mismatch: left = {:?}, right = {:?}",
+            left, right
+        );
+        assert_eq!(
+            left.singular_name, right.singular_name,
+            "Singular name mismatch: left = {:?}, right = {:?}",
+            left, right
+        );
+        assert_eq!(
+            left.plural_name, right.plural_name,
+            "Plural name mismatch: left = {:?}, right = {:?}",
+            left, right
+        );
+    }
+}
+
+pub fn assert_units_match(left_units: &[Unit], right_units: &[Unit]) {
+    // Ensure both unit slices are sorted by unit_id
+    let mut left_sorted = left_units.to_vec();
+    let mut right_sorted = right_units.to_vec();
+
+    left_sorted.sort_by_key(|unit| unit.unit_id);
+    right_sorted.sort_by_key(|unit| unit.unit_id);
+
+    assert_eq!(
+        left_sorted.len(),
+        right_sorted.len(),
+        "The number of ingredients does not match."
+    );
+
+    for (left, right) in left_sorted.iter().zip(right_sorted.iter()) {
+        assert_eq!(
+            left.unit_id, right.unit_id,
+            "Unit ID mismatch: left = {:?}, right = {:?}",
+            left, right
+        );
+        assert_eq!(
+            left.singular_name, right.singular_name,
+            "Singular name mismatch: left = {:?}, right = {:?}",
+            left, right
+        );
+        assert_eq!(
+            left.plural_name, right.plural_name,
+            "Plural name mismatch: left = {:?}, right = {:?}",
+            left, right
+        );
+    }
 }
