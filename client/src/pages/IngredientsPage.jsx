@@ -24,7 +24,7 @@ export default function Ingredients() {
         <div class='ingredients-page'>
             <div class='ingredients-header'>
                 <div></div>
-                <div class=''>
+                <div class='available-ingredients'>
                     <h1>Available ingredients</h1>
                 </div>
                 <div class='add-new-ingredient'>
@@ -46,7 +46,7 @@ export default function Ingredients() {
                 </div>
                 <div class='available-ingredient'>
                     <img src={carrotIcon} alt="" />
-                    <span class='ingredient-name'>Carrot</span>
+                    <span class='ingredient-name'>Pineapple</span>
                 </div>
                 <div class='available-ingredient'>
                     <img src={carrotIcon} alt="" />
