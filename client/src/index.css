@@ -1,13 +1,197 @@
-body {
+@import url('https://fonts.googleapis.com/css2?family=Varela+Round&display=swap');
+* {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  padding: 0;
+  font-family: "Varela Round", sans-serif;
+  font-weight: 400;
+  font-style: normal;
+}
+a {
+  all: unset;
+}
+body, #root{
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+:root {
+  --nav-border: 2px solid black;
+  --padding-100: 1rem;
+  --main-page-btn-gap: 1rem;
+  --font-100: 0.75rem;
+  --font-400: 1rem;
+  --font-500: 1.1rem;
+  --beige: #FECAAC;
+}
+/* NAVBAR */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: var(--nav-border);
+  padding: var(--padding-100);
+}
+.logo-and-text{
+  display: flex;
+  justify-content: start;
+  align-items: center;
+  gap: 0.2rem;
+}
+.nav-logo{
+  min-height: 3rem;
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+/* HOME PAGE */
+.main-page-btns{
+  display: flex;
+  justify-content: center;
+  gap: var(--main-page-btn-gap);
+  flex-grow: 1;
+  padding-block: 5rem;
+}
+
+.main-page-btns img {
+  max-height: 8rem; /* Fix this! */
+  aspect-ratio: 1/1;
+}
+
+.main-page-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-around;
+  border-radius: 2rem;
+  padding: 1rem;
+  transition: all ease-in-out 1s;
+  text-decoration: none;
+}
+.main-page-btn:hover{
+  cursor: pointer;
+}
+.left-side,.right-side{
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.left-side {
+  gap: var(--main-page-btn-gap);
+}
+.left-side>.main-page-btn{
+  height: 50%;
+}
+.explore-btn{
+  background-color: #FECAAC;
+}
+.friends-btn {
+  background-color: #D4D4AA;
+}
+.right-side {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.my-profile-btn{
+  background-color: #F87C6B;
+}
+.new-recipe-btn{
+  background-color: #B5C6F5;
+}
+.saved-btn{
+  background-color: #D4AAC8;
+}
+
+
+/* BASE EXPLORE COMPONENT */
+.explore-page {
+  padding: 1rem;
+  background-color: var(--beige);
+  min-height: 100%;
+}
+.explore-card-container{
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+.explore-card {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: stretch;
+  justify-items: center;
+  padding: 1rem;
+  background-color: #F87C6B;
+  border-radius: 1rem;
+  max-height: 10rem;
+  overflow: hidden;
+}
+
+.explore-card:nth-child(2n)>img{
+  order: 100;
+}
+.explore-card:nth-child(2n){
+  text-align: end;
+}
+img.explore-card-image{
+  display:block;
+  aspect-ratio: 1/1;
+  max-height: 8rem;
+  object-fit:contain;
+  border-radius: 1rem;
+}
+.explore-card-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 0.5rem;
+  justify-content: space-between;
+}
+.explore-card-name {
+  font-size: var(--font-400);
+}
+.explore-card-description{
+  flex:1;
+  font-size: var(--font-100);
+}
+.explore-navigation {
+  margin-block: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.explore-navigation>div{
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+.explore-navigation img{
+  max-height: 1.5rem;
+}
+.explore-previous-page>img{
+  transform: scaleX(-1);
+}
+
+/* INGREDIENT EXPLORE PAGE */
+.ingredients-page {
+  min-height: 100%;
+  background-color: var(--beige);
+  display: flex;
+  flex-direction: column;
+}
+.ingredients-header{
+  display: grid;
+  justify-content: center;
+  align-items: center;
+  grid-template-columns: 0.5fr 1fr 0.5fr;
+}
+.ingredients-header h1{
+  font-size: var(--font-500);
+}
+.add-new-ingredient{
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: var(--font-100);
+  gap: 0.2rem;
 }

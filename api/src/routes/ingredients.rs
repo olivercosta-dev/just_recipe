@@ -96,5 +96,6 @@ pub async fn get_ingredients_by_query_handler(
         ingredients,
         next_start_from,
     };
+    
     Ok(Json(response))
 }

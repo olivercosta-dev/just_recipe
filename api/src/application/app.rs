@@ -1,18 +1,18 @@
 use super::state::AppState;
 use crate::{
     routes::{
-        add_ingredient_handler, add_recipe_handler, add_unit_handler, get_ingredient_by_id_handler, get_ingredients_by_query_handler,
-        get_recipe_handler, get_recipe_by_query_handler, get_unit_handler, get_units_by_query_handler, health_check,
-        remove_ingredient_handler, remove_recipe_handler, remove_unit_handler, update_ingredient_handler, update_recipe_handler,
-        update_unit_handler,
+        add_ingredient_handler, add_recipe_handler, add_unit_handler, get_ingredient_by_id_handler,
+        get_ingredients_by_query_handler, get_recipe_by_query_handler, get_recipe_handler,
+        get_unit_handler, get_units_by_query_handler, health_check, remove_ingredient_handler,
+        remove_recipe_handler, remove_unit_handler, update_ingredient_handler,
+        update_recipe_handler, update_unit_handler,
     },
     utilities::fetchers::{fetch_all_ingredient_ids, fetch_all_unit_ids},
 };
 use axum::{
-    routing::{get, post, put},
-    Router,
+    http::Method, routing::{get, post, put}, Router
 };
-use tower_http::catch_panic::CatchPanicLayer;
+use tower_http::cors::{Any, CorsLayer};
 
 #[derive(Clone)]
 pub struct App {
@@ -37,7 +37,7 @@ impl App {
 
     /// Initializes the cache inside AppState
     /// and returns the new one with the included cache.
-    /// 
+    ///
     /// <b>Note: This function might panic! Initializing the cache is crucial!</b>
     async fn init_cache(state: AppState) -> AppState {
         let unit_ids = fetch_all_unit_ids(&state.pool)
@@ -54,13 +54,21 @@ impl App {
     }
 
     fn create_router(state: AppState) -> Router {
+        let cors = CorsLayer::new()
+            .allow_methods(Any)
+            .allow_origin(Any);
         Router::new()
             .route("/", get(health_check))
             .route(
                 "/units",
-                post(add_unit_handler).delete(remove_unit_handler).get(get_units_by_query_handler),
+                post(add_unit_handler)
+                    .delete(remove_unit_handler)
+                    .get(get_units_by_query_handler),
             )
-            .route("/units/:unit_id", put(update_unit_handler).get(get_unit_handler))
+            .route(
+                "/units/:unit_id",
+                put(update_unit_handler).get(get_unit_handler),
+            )
             .route(
                 "/ingredients",
                 post(add_ingredient_handler)
@@ -77,9 +85,13 @@ impl App {
                     .delete(remove_recipe_handler)
                     .get(get_recipe_by_query_handler),
             )
-            .route("/recipes/:recipe_id", put(update_recipe_handler).get(get_recipe_handler))
-            .layer(CatchPanicLayer::new())
+            .route(
+                "/recipes/:recipe_id",
+                put(update_recipe_handler).get(get_recipe_handler),
+            )
             .with_state(state)
+            .layer(cors)
+        // .layer(CatchPanicLayer::new())
     }
 
     pub async fn serve(self) {
