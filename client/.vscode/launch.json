@@ -1,0 +1,141 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in library 'just_recipe'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--lib",
+                    "--package=just_recipe"
+                ],
+                "filter": {
+                    "name": "just_recipe",
+                    "kind": "lib"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug executable 'just_recipe'",
+            "cargo": {
+                "args": [
+                    "build",
+                    "--bin=just_recipe",
+                    "--package=just_recipe"
+                ],
+                "filter": {
+                    "name": "just_recipe",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug unit tests in executable 'just_recipe'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--bin=just_recipe",
+                    "--package=just_recipe"
+                ],
+                "filter": {
+                    "name": "just_recipe",
+                    "kind": "bin"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'health_check'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=health_check",
+                    "--package=just_recipe"
+                ],
+                "filter": {
+                    "name": "health_check",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'ingredients'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=ingredients",
+                    "--package=just_recipe"
+                ],
+                "filter": {
+                    "name": "ingredients",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'recipes'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=recipes",
+                    "--package=just_recipe"
+                ],
+                "filter": {
+                    "name": "recipes",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        },
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug integration test 'units'",
+            "cargo": {
+                "args": [
+                    "test",
+                    "--no-run",
+                    "--test=units",
+                    "--package=just_recipe"
+                ],
+                "filter": {
+                    "name": "units",
+                    "kind": "test"
+                }
+            },
+            "args": [],
+            "cwd": "${workspaceFolder}"
+        }
+    ]
+}

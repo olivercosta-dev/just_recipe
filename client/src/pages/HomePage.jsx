@@ -26,10 +26,10 @@ export default function HomePage() {
                     <img class='my-profile-logo' src={myProfileLogo} alt="An icon representing a sunrise behind a mountain." />
                     <span>My Profile</span>
                 </div>
-                <div class='main-page-btn new-recipe-btn'>
+                <a class='main-page-btn new-recipe-btn' href='/newRecipe'>
                     <img class='new-recipe-logo' src={newRecipeLogo} alt="An icon of two cherries next to each other." />
                     <span>New Recipe</span>
-                </div>
+                </a>
                 <div class='main-page-btn saved-btn'>
                     <img class='new-recipe-logo' src={savedLogo} alt="An icon of two cherries next to each other." />
                     <span>Saved</span>

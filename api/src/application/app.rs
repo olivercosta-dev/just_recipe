@@ -56,7 +56,8 @@ impl App {
     fn create_router(state: AppState) -> Router {
         let cors = CorsLayer::new()
             .allow_methods(Any)
-            .allow_origin(Any);
+            .allow_origin(Any)
+            .allow_headers(Any);
         Router::new()
             .route("/", get(health_check))
             .route(
