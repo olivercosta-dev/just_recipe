@@ -3,10 +3,11 @@ import { styled } from 'solid-styled-components';
 import baseUrl from '../baseUrl';
 import AddNewIngredient from '../components/AddNewIngredient';
 import IngredientItem from '../components/IngredientItem';
+import { useIngredients } from '../IngredientsProvider';
 
-const fetchIngredients = async (startFrom) => {
+const fetchIngredients = async () => {
     const defaultLimit = 4;
-    const response = await fetch(baseUrl + '/ingredients?' + `startFrom=${startFrom}&` + `limit=${defaultLimit}`);
+    const response = await fetch(baseUrl + '/ingredients/all');
     const data = await response.json();
     return data.ingredients;
 };
@@ -62,18 +63,7 @@ const IngredientsGrid = styled.div`
 
 export default function IngredientsPage() {
     const defaultLimit = 4;
-    const [startFrom, setStartFrom] = createSignal(0);
-    const [ingredients, { mutate }] = createResource(startFrom, fetchIngredients);
-
-    const removeIngredient = (ingredientId) => {
-        mutate((prevIngredients) =>
-            prevIngredients.filter((ingredient) => ingredient.ingredient_id !== ingredientId)
-        );
-    };
-
-    const addIngredient = (newIngredient) => {
-        mutate((prevIngredients) => [newIngredient, ...prevIngredients]);
-    };
+    const { ingredients } = useIngredients();
 
     return (
         <IngredientsPageContainer>
@@ -88,12 +78,11 @@ export default function IngredientsPage() {
                 <SearchInput type='text' placeholder='Searching for an ingredient? Click here!' />
             </IngredientsSearch>
             <IngredientsGrid>
-                <AddNewIngredient onAdd={addIngredient} />
+                <AddNewIngredient />
                 <For each={ingredients()}>
                     {(ingredient, index) => (
                         <IngredientItem
                             ingredient={ingredient}
-                            onDelete={removeIngredient}
                         />
                     )}
                 </For>

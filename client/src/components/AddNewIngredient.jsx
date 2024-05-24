@@ -2,6 +2,7 @@ import { styled } from 'solid-styled-components';
 import addNewIcon from '../assets/add-new-icon.svg';
 import { createSignal } from 'solid-js';
 import baseUrl from '../baseUrl';
+import { useIngredients } from '../IngredientsProvider';
 
 const Dialog = styled('dialog')`
   border: none;
@@ -116,14 +117,14 @@ const AddNewText = styled('span')`
   color: #333;
  
 `
-function AddNewIngredient({ onAdd }) {
+function AddNewIngredient() {
   let dialogRef;
 
   const [singularName, setSingularName] = createSignal('');
   const [pluralName, setPluralName] = createSignal('');
   const [submitButtonText, setSubmitButtonText] = createSignal('Add Ingredient');
   const [submitButtonClass, setSubmitButtonClass] = createSignal('');
-
+  const {fetchIngredients} = useIngredients();
   const showDialog = () => {
     dialogRef.showModal();
   };
@@ -150,7 +151,7 @@ function AddNewIngredient({ onAdd }) {
       if (response.ok) {
         setSubmitButtonText('Added Successfully');
         setSubmitButtonClass('success');
-        onAdd(formData);
+        fetchIngredients();
         closeDialog();
       } else {
         setSubmitButtonText('Failed to Add');
@@ -160,12 +161,12 @@ function AddNewIngredient({ onAdd }) {
       setSubmitButtonText('Failed to Add');
       setSubmitButtonClass('error');
     }
-
+    fetchIngredients();
     // Reset button text and class after a delay
     setTimeout(() => {
       setSubmitButtonText('Add Ingredient');
       setSubmitButtonClass('');
-    }, 3000);
+    }, 1000);
   };
 
   return (

@@ -11,10 +11,19 @@ import newRecipeLogo from './assets/new-recipe-logo.svg'
 import savedLogo from './assets/saved-logo.svg'
 import HomePage from './pages/HomePage';
 import routes from './routes';
-import { Router, Route } from '@solidjs/router';
-function App() {
+import { Router } from '@solidjs/router';
+import { createStore } from 'solid-js/store';
+import baseUrl from './baseUrl';
+import { createResource, onMount } from 'solid-js';
+import { createContext, useContext } from "solid-js";
+import { ingredients, setIngredients } from "./store";
+import { IngredientsProvider, useIngredients } from './IngredientsProvider';
 
-  // This is gonna be the Home Page for now.
+function App() {
+  const { fetchIngredients } = useIngredients();
+  onMount(() => {
+    fetchIngredients()
+  })
   return (<>
     <Navbar></Navbar>
     <Router>

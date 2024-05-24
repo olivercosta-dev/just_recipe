@@ -1,7 +1,8 @@
 import { styled } from 'solid-styled-components';
-import { createSignal } from 'solid-js';
+import { createSignal, useContext } from 'solid-js';
 import carrotIcon from '../assets/ingredient_icons/carrot.svg';
 import baseUrl from '../baseUrl';
+import { useIngredients } from '../IngredientsProvider';
 
 const Container = styled('div')`
   display: flex;
@@ -63,9 +64,9 @@ const FeedbackMessage = styled('span')`
   color: ${props => (props.success ? 'green' : 'red')};
 `;
 
-export default function IngredientItem({ ingredient, onDelete }) {
+export default function IngredientItem({ ingredient }) {
   const [feedbackMessage, setFeedbackMessage] = createSignal('');
-
+  const { fetchIngredients } = useIngredients();
   const handleDelete = async () => {
     try {
       const dataToSend = {
@@ -79,16 +80,13 @@ export default function IngredientItem({ ingredient, onDelete }) {
         body: JSON.stringify(dataToSend)
       });
 
-      if (response.ok) {
-        setFeedbackMessage('Ingredient deleted successfully');
-        onDelete(ingredient.ingredient_id);
-      } else {
+      if (!response.ok) {
         setFeedbackMessage('Failed to delete ingredient');
       }
     } catch (error) {
       setFeedbackMessage('Failed to delete ingredient');
     }
-
+    fetchIngredients();
     // Clear feedback message after a few seconds
     setTimeout(() => setFeedbackMessage(''), 1000);
   };
