@@ -1,4 +1,4 @@
-use sqlx::{postgres::PgQueryResult, Executor, PgPool, Postgres};
+use sqlx::{postgres::PgQueryResult, Executor, Postgres};
 
 use crate::application::{
     error::{AppError, RecipeParsingError},
@@ -6,7 +6,7 @@ use crate::application::{
 };
 
 use super::{
-    recipe::{NotBacked, Recipe},
+    recipe::Recipe,
     recipe_ingredient::{CompactRecipeIngredient, RecipeIngredient},
     recipe_step::RecipeStep,
 };
