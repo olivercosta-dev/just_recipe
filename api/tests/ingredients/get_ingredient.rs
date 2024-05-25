@@ -1,13 +1,18 @@
 use std::default;
 
-use axum::{body::to_bytes, http::StatusCode};
+use axum::{
+    body::to_bytes,
+    http::{response, StatusCode},
+};
 use fake::{Fake, Faker};
 use just_recipe::{
     application::{app::App, state::AppState},
     ingredient::Ingredient,
     routes::GetIngredientsResponse,
     utilities::{
-        assertions::assert_ingredients_match, random_generation::ingredients::choose_random_ingredient, request_creators::create_get_request_to
+        assertions::assert_ingredients_match,
+        random_generation::ingredients::choose_random_ingredient,
+        request_creators::create_get_request_to,
     },
 };
 use serde_json::json;
@@ -112,19 +117,61 @@ async fn getting_ingredients_returns_ingredients_200_ok(pool: PgPool) -> sqlx::R
             start_from = response_ingredients.next_start_from;
         }
     }
-
     Ok(())
 }
 
 #[sqlx::test]
-async fn getting_ingredients_with_wrong_parameters_returns_404_bad_request(pool: PgPool) -> sqlx::Result<()> {
+async fn getting_ingredients_with_wrong_parameters_returns_404_bad_request(
+    pool: PgPool,
+) -> sqlx::Result<()> {
     let app_state = AppState::new(pool);
     let app = App::new(app_state.clone(), default::Default::default(), 0).await;
-    let query_params: Option<String> = Some(format!("{}={}", Faker.fake::<String>(), Faker.fake::<String>()));
+    let query_params: Option<String> = Some(format!(
+        "{}={}",
+        Faker.fake::<String>(),
+        Faker.fake::<String>()
+    ));
     let json = json!({});
     let request = create_get_request_to("ingredients", None, query_params, json);
     let response = app.router.clone().oneshot(request).await.unwrap();
     assert_eq!(response.status(), StatusCode::BAD_REQUEST);
 
+    Ok(())
+}
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("ingredients")))]
+async fn getting_all_ingredients_returns_all_ingredients(pool: PgPool) -> sqlx::Result<()> {
+    let request = create_get_request_to("ingredients/all", None, None, json!({}));
+    let app_state = AppState::new(pool);
+    let app = App::new(app_state.clone(), default::Default::default(), 0).await;
+    let response = app
+        .router
+        .oneshot(request)
+        .await
+        .expect("should have gotten a response");
+    let bytes = to_bytes(response.into_body(), usize::MAX)
+        .await
+        .expect("Failed to read body bytes");
+    let response_ingredients: Vec<Ingredient> =
+        serde_json::from_slice(&bytes).expect("Failed to deserialize JSON");
+
+    let db_ingredients = sqlx::query_as!(
+        Ingredient,
+        r#"
+            SELECT *
+            FROM ingredient
+            ORDER BY singular_name
+        "#,
+    )
+    .fetch_all(&app_state.pool)
+    .await?;
+    assert_eq!(response_ingredients.len(), db_ingredients.len());
+    // Because both should be in order by singular_name
+    db_ingredients
+        .iter()
+        .zip(response_ingredients.iter())
+        .for_each(|(db, resp)| {
+            assert_eq!(db, resp);
+        });
     Ok(())
 }

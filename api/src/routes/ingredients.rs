@@ -13,7 +13,7 @@ use crate::{
         Ingredient,
     },
     utilities::{
-        fetchers::{fetch_ingredient, fetch_ingredients_with_pagination},
+        fetchers::{fetch_all_ingredients, fetch_ingredient, fetch_ingredients_with_pagination},
         queries::PaginationQuery,
     },
 };
@@ -97,6 +97,13 @@ pub async fn get_ingredients_by_query_handler(
         ingredients,
         next_start_from,
     };
-    
+
     Ok(Json(response))
+}
+
+pub async fn get_all_ingredients_handler(
+    State(state): State<AppState>,
+) -> Result<Json<Vec<Ingredient>>, AppError> {
+    let ingredients = fetch_all_ingredients(&state.pool).await?;
+    Ok(Json(ingredients))
 }

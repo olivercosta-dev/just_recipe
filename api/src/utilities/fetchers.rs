@@ -1,6 +1,6 @@
 use axum::extract::Query;
 use dashmap::DashSet;
-use sqlx::PgPool;
+use sqlx::{Executor, PgPool, Postgres};
 
 use crate::{
     application::error::AppError,
@@ -341,4 +341,19 @@ pub async fn fetch_ingredient(pool: &PgPool, ingredient_id: i32) -> Result<Ingre
     .await?
     .ok_or(AppError::NotFound)?;
     Ok(ingredient)
+}
+
+pub async fn fetch_all_ingredients<'a>(
+    executor: impl Executor<'_, Database = Postgres>,
+) -> Result<Vec<Ingredient>, AppError> {
+    Ok(sqlx::query_as!(
+            Ingredient,
+            r#"
+                SELECT *
+                FROM ingredient
+                ORDER BY singular_name;
+            "#
+        )
+        .fetch_all(executor)
+        .await?)
 }
