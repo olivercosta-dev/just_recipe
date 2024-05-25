@@ -1,5 +1,6 @@
-import { createSignal, For, Show } from 'solid-js';
+import { createSignal, For, Show, onMount } from 'solid-js';
 import { styled } from 'solid-styled-components';
+import { useIngredients } from '../IngredientsProvider';
 
 const NewRecipePageContainer = styled.div`
   padding: 1rem;
@@ -118,14 +119,6 @@ const SuggestionItem = styled.li`
   }
 `;
 
-const availableIngredients = [
-  { id: 1, name: "Flour" },
-  { id: 2, name: "Sugar" },
-  { id: 3, name: "Salt" },
-  { id: 4, name: "Butter" },
-  { id: 5, name: "Milk" }
-];
-
 const availableUnits = [
   { id: 1, name: "g" },
   { id: 2, name: "kg" },
@@ -137,16 +130,25 @@ const availableUnits = [
 ];
 
 export default function NewRecipePage() {
+  const { ingredients, fetchIngredients } = useIngredients();
+
+  onMount(() => {
+    fetchIngredients();
+    setIngredientSuggestions(ingredients());
+  });
+
   const [name, setName] = createSignal("");
   const [description, setDescription] = createSignal("");
-  const [ingredients, setIngredients] = createSignal([{ ingredient: "", ingredientId: null, unit: "", unitId: null, quantity: "" }]);
+  const [recipe_ingredients, setRecipeIngredients] = createSignal([{ ingredient: "", ingredientId: null, unit: "", unitId: null, quantity: "" }]);
   const [steps, setSteps] = createSignal([{ instruction: "", number: 1 }]);
 
-  const [ingredientSuggestions, setIngredientSuggestions] = createSignal([]);
+  const [ingredientSuggestions, setIngredientSuggestions] = createSignal(ingredients());
   const [unitSuggestions, setUnitSuggestions] = createSignal([]);
+  const [showIngredientSuggestions, setShowIngredientSuggestions] = createSignal(false);
+  const [showUnitSuggestions, setShowUnitSuggestions] = createSignal(false);
 
   const addIngredientField = () => {
-    setIngredients([...ingredients(), { ingredient: "", ingredientId: null, unit: "", unitId: null, quantity: "" }]);
+    setRecipeIngredients([...recipe_ingredients(), { ingredient: "", ingredientId: null, unit: "", unitId: null, quantity: "" }]);
   };
 
   const addStepField = () => {
@@ -154,20 +156,32 @@ export default function NewRecipePage() {
   };
 
   const handleIngredientChange = (index, field, value) => {
-    const updatedIngredients = ingredients().map((ingredient, i) => i === index ? { ...ingredient, [field]: value } : ingredient);
-    setIngredients(updatedIngredients);
+    const updatedIngredients = recipe_ingredients().map((ingredient, i) => i === index ? { ...ingredient, [field]: value } : ingredient);
+    setRecipeIngredients(updatedIngredients);
     if (field === "ingredient") {
-      setIngredientSuggestions(availableIngredients.filter(ing => ing.name.toLowerCase().includes(value.toLowerCase())));
+      setIngredientSuggestions(ingredients().filter(ing => ing.singular_name.toLowerCase().includes(value.toLowerCase())));
+      setShowIngredientSuggestions(true);
     } else if (field === "unit") {
       setUnitSuggestions(availableUnits.filter(unit => unit.name.toLowerCase().includes(value.toLowerCase())));
+      setShowUnitSuggestions(true);
     }
   };
 
+  const handleIngredientBlur = (index) => {
+    const ingredient = recipe_ingredients()[index].ingredient;
+    const matchedIngredient = ingredients().find(ing => ing.singular_name.toLowerCase() === ingredient.toLowerCase());
+    if (matchedIngredient) {
+      const updatedIngredients = recipe_ingredients().map((ingredient, i) => i === index ? { ...ingredient, ingredientId: matchedIngredient.id } : ingredient);
+      setRecipeIngredients(updatedIngredients);
+    }
+    setShowIngredientSuggestions(false);
+  };
+
   const handleSuggestionClick = (index, field, value, idField, id) => {
-    const updatedIngredients = ingredients().map((ingredient, i) => i === index ? { ...ingredient, [field]: value, [idField]: id } : ingredient);
-    setIngredients(updatedIngredients);
-    setIngredientSuggestions([]);
-    setUnitSuggestions([]);
+    const updatedIngredients = recipe_ingredients().map((ingredient, i) => i === index ? { ...ingredient, [field]: value, [idField]: id } : ingredient);
+    setRecipeIngredients(updatedIngredients);
+    setShowIngredientSuggestions(false);
+    setShowUnitSuggestions(false);
   };
 
   const handleStepChange = (index, value) => {
@@ -181,7 +195,7 @@ export default function NewRecipePage() {
     console.log({
       name: name(),
       description: description(),
-      ingredients: ingredients(),
+      ingredients: recipe_ingredients(),
       steps: steps()
     });
   };
@@ -200,7 +214,7 @@ export default function NewRecipePage() {
         </InputGroup>
         <InputGroup>
           <Label>Ingredients</Label>
-          <For each={ingredients()}>
+          <For each={recipe_ingredients()}>
             {(ingredient, index) => (
               <IngredientContainer>
                 <Input
@@ -208,14 +222,17 @@ export default function NewRecipePage() {
                   placeholder="Ingredient"
                   value={ingredient.ingredient}
                   onInput={(e) => handleIngredientChange(index, "ingredient", e.target.value)}
+                  onFocus={() => setShowIngredientSuggestions(true)}
+                  onBlur={() => handleIngredientBlur(index())} // Directly call the function
+                  data-ingredient-id={ingredient.ingredientId}
                 />
                 <Suggestions>
-                  <Show when={ingredientSuggestions().length > 0}>
+                  <Show when={showIngredientSuggestions() && ingredientSuggestions().length > 0}>
                     <SuggestionList>
                       <For each={ingredientSuggestions()}>
                         {(suggestion) => (
-                          <SuggestionItem onClick={() => handleSuggestionClick(index, "ingredient", suggestion.name, "ingredientId", suggestion.id)}>
-                            {suggestion.name}
+                          <SuggestionItem onClick={() => handleSuggestionClick(index, "ingredient", suggestion.singular_name, "ingredientId", suggestion.id)}>
+                            {suggestion.singular_name}
                           </SuggestionItem>
                         )}
                       </For>
@@ -227,9 +244,11 @@ export default function NewRecipePage() {
                   placeholder="Unit"
                   value={ingredient.unit}
                   onInput={(e) => handleIngredientChange(index, "unit", e.target.value)}
+                  onFocus={() => setShowUnitSuggestions(true)}
+                  onBlur={() => setShowUnitSuggestions(false)} // Directly call the function
                 />
                 <Suggestions>
-                  <Show when={unitSuggestions().length > 0}>
+                  <Show when={showUnitSuggestions() && unitSuggestions().length > 0}>
                     <SuggestionList>
                       <For each={unitSuggestions()}>
                         {(suggestion) => (

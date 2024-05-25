@@ -6,7 +6,8 @@ import savedLogo from '../assets/saved-logo.svg'
 import { Router, Route } from "@solidjs/router";
 import NotFound from './NotFound'
 import Explore from './ExploreRecipe'
-
+import { useIngredients } from '../IngredientsProvider'
+import { ingredients } from '../store'
 export default function HomePage() {
     // This is gonna be the Home Page for now.
     return (

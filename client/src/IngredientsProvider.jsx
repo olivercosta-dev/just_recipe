@@ -1,7 +1,9 @@
 import {setIngredients, ingredients} from './store.js'
 import { createContext, useContext } from 'solid-js';
-const IngredientsContext = createContext();
 import baseUrl from './baseUrl.js';
+
+const IngredientsContext = createContext();
+
 export function IngredientsProvider(props) {
     const fetchIngredients = async () => {
         try {
