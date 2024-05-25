@@ -13,16 +13,16 @@ const AddNewIngredient: Component<AddNewIngredientProps> = (props) => {
   const [pluralName, setPluralName] = createSignal('');
   const [submitButtonText, setSubmitButtonText] = createSignal('Add Ingredient');
   const [submitButtonClass, setSubmitButtonClass] = createSignal('');
-
+  const { fetchIngredients } = useIngredients();
   const showDialog = () => {
-    dialogRef?.showModal();
+    dialogRef.showModal();
   };
 
   const closeDialog = () => {
-    dialogRef?.close();
+    dialogRef.close();
   };
 
-  const onSubmit = async (event: Event) => {
+  const onSubmit = async (event) => {
     event.preventDefault();
     const formData = {
       singular_name: singularName(),
@@ -40,7 +40,7 @@ const AddNewIngredient: Component<AddNewIngredientProps> = (props) => {
       if (response.ok) {
         setSubmitButtonText('Added Successfully');
         setSubmitButtonClass('success');
-        props.onAdd(formData);
+        fetchIngredients();
         closeDialog();
       } else {
         setSubmitButtonText('Failed to Add');
@@ -50,12 +50,12 @@ const AddNewIngredient: Component<AddNewIngredientProps> = (props) => {
       setSubmitButtonText('Failed to Add');
       setSubmitButtonClass('error');
     }
-
+    fetchIngredients();
     // Reset button text and class after a delay
     setTimeout(() => {
       setSubmitButtonText('Add Ingredient');
       setSubmitButtonClass('');
-    }, 3000);
+    }, 1000);
   };
 
   return (
