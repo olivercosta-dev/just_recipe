@@ -29,3 +29,6 @@ body,#root {
 .explore-card-info {
   gap: 0.5rem; /* This needs to be added as a ts varaible maybe?*/
 }
+:hover>.full-opacity-when-parent-hovered {
+  opacity: 100 !important;
+}

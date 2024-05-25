@@ -3,7 +3,7 @@ import { render } from 'solid-js/web';
 
 import './index.css';
 import App from './App';
-import { IngredientsProvider } from './IngredientsProvider';
+import { IngredientsProvider } from './IngredientsProvier';
 
 const root = document.getElementById('root');
 

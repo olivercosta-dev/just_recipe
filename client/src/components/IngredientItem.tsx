@@ -1,16 +1,13 @@
 import { createSignal, Component } from 'solid-js';
 import carrotIcon from '../assets/ingredient_icons/carrot.svg';
 import baseUrl from '../baseUrl';
+import { Ingredient } from '../interfaces';
 interface IngredientItemProps {
-  ingredient: {
-    ingredient_id: string;
-    singular_name: string;
-    // Add other fields as needed
-  };
-  onDelete: (ingredientId: string) => void;
+  ingredient: Ingredient
+  refetchIngredients: () => void;
 }
 
-const IngredientItem: Component<IngredientItemProps> = ({ ingredient, onDelete }) => {
+const IngredientItem: Component<IngredientItemProps> = ({ ingredient, refetchIngredients }) => {
   const [feedbackMessage, setFeedbackMessage] = createSignal<string>('');
 
   const handleDelete = async () => {
@@ -28,7 +25,7 @@ const IngredientItem: Component<IngredientItemProps> = ({ ingredient, onDelete }
 
       if (response.ok) {
         setFeedbackMessage('Ingredient deleted successfully');
-        onDelete(ingredient.ingredient_id);
+        refetchIngredients();
       } else {
         setFeedbackMessage('Failed to delete ingredient');
       }
@@ -41,11 +38,18 @@ const IngredientItem: Component<IngredientItemProps> = ({ ingredient, onDelete }
   };
 
   return (
-    <div class="flex flex-col items-stretch justify-center relative bg-gray-200 rounded-3xl p-2 shadow hover:opacity-50">
+    <div class="group flex flex-col items-stretch justify-center relative bg-gray-200 rounded-3xl p-2 shadow hover:opacity-50">
       <img src={carrotIcon} alt={ingredient.singular_name} class="min-h-12 max-h-16 aspect-square" />
       <button
         onClick={handleDelete}
-        class="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 p-1 bg-red-500 text-white rounded-md font-bold text-sm cursor-pointer shadow transition-all hover:bg-red-400 hover:scale-110"
+        class="
+        opacity-0 
+        absolute left-1/2 top-1/2 transform 
+        -translate-x-1/2 
+        -translate-y-1/2 p-1
+         bg-red-500 text-white
+          rounded-md font-bold text-sm cursor-pointer shadow transition-all hover:scale-110
+          full-opacity-when-parent-hovered"
       >
         Delete
       </button>
@@ -56,6 +60,7 @@ const IngredientItem: Component<IngredientItemProps> = ({ ingredient, onDelete }
         </span>
       )}
     </div>
+
   );
 };
 

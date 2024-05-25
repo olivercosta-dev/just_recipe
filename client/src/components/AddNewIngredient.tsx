@@ -1,12 +1,9 @@
 import addNewIcon from '../assets/add-new-icon.svg';
 import { createSignal, Component } from 'solid-js';
 import baseUrl from '../baseUrl';
+import { useIngredients } from '../IngredientsProvier';
 
-interface AddNewIngredientProps {
-  onAdd: (ingredient: { singular_name: string; plural_name: string }) => void;
-}
-
-const AddNewIngredient: Component<AddNewIngredientProps> = (props) => {
+const AddNewIngredient: Component = (props) => {
   let dialogRef: HTMLDialogElement | undefined;
 
   const [singularName, setSingularName] = createSignal('');
@@ -14,15 +11,16 @@ const AddNewIngredient: Component<AddNewIngredientProps> = (props) => {
   const [submitButtonText, setSubmitButtonText] = createSignal('Add Ingredient');
   const [submitButtonClass, setSubmitButtonClass] = createSignal('');
   const { fetchIngredients } = useIngredients();
+
   const showDialog = () => {
-    dialogRef.showModal();
+    dialogRef?.showModal();
   };
 
   const closeDialog = () => {
-    dialogRef.close();
+    dialogRef?.close();
   };
 
-  const onSubmit = async (event) => {
+  const onSubmit = async (event: Event) => {
     event.preventDefault();
     const formData = {
       singular_name: singularName(),
@@ -32,7 +30,7 @@ const AddNewIngredient: Component<AddNewIngredientProps> = (props) => {
       const response = await fetch(`${baseUrl}/ingredients`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify(formData),
       });
@@ -51,7 +49,6 @@ const AddNewIngredient: Component<AddNewIngredientProps> = (props) => {
       setSubmitButtonClass('error');
     }
     fetchIngredients();
-    // Reset button text and class after a delay
     setTimeout(() => {
       setSubmitButtonText('Add Ingredient');
       setSubmitButtonClass('');
@@ -108,8 +105,7 @@ const AddNewIngredient: Component<AddNewIngredientProps> = (props) => {
             />
             <button
               type="submit"
-              class={`p-2 bg-red-500 text-white rounded-3xl text-base mt-4 w-full ${submitButtonClass() === 'success' ? 'bg-green-500' : ''
-                } ${submitButtonClass() === 'error' ? 'bg-red-700' : ''} hover:bg-red-400`}
+              class={`p-2 bg-red-500 text-white rounded-3xl text-base mt-4 w-full ${submitButtonClass() === 'success' ? 'bg-green-500' : ''} ${submitButtonClass() === 'error' ? 'bg-red-700' : ''} hover:bg-red-400`}
             >
               {submitButtonText()}
             </button>
