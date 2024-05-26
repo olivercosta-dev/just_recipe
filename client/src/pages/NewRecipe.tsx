@@ -1,6 +1,6 @@
-import { createSignal, For, Show, Component } from 'solid-js';
-
-
+import { createSignal, For, Show, Component, onMount } from 'solid-js';
+import { useIngredients } from '../IngredientsProvier';
+import { Select, createOptions } from '@thisbeyond/solid-select';
 interface Ingredient {
   id: number;
   name: string;
@@ -24,211 +24,44 @@ interface Step {
   number: number;
 }
 
-const availableIngredients: Ingredient[] = [
-  { id: 1, name: "Flour" },
-  { id: 2, name: "Sugar" },
-  { id: 3, name: "Salt" },
-  { id: 4, name: "Butter" },
-  { id: 5, name: "Milk" }
-];
-
-const availableUnits: Unit[] = [
-  { id: 1, name: "g" },
-  { id: 2, name: "kg" },
-  { id: 3, name: "ml" },
-  { id: 4, name: "l" },
-  { id: 5, name: "cup" },
-  { id: 6, name: "tsp" },
-  { id: 7, name: "tbsp" }
-];
 
 const NewRecipePage: Component = () => {
-  const [name, setName] = createSignal<string>("");
-  const [description, setDescription] = createSignal<string>("");
-  const [ingredients, setIngredients] = createSignal<RecipeIngredient[]>([
-    { ingredient: "", ingredientId: null, unit: "", unitId: null, quantity: "" }
-  ]);
-  const [steps, setSteps] = createSignal<Step[]>([
-    { instruction: "", number: 1 }
-  ]);
-
-  const [ingredientSuggestions, setIngredientSuggestions] = createSignal<Ingredient[]>([]);
-  const [unitSuggestions, setUnitSuggestions] = createSignal<Unit[]>([]);
-
-  const addIngredientField = () => {
-    setIngredients([
-      ...ingredients(),
-      { ingredient: "", ingredientId: null, unit: "", unitId: null, quantity: "" }
-    ]);
-  };
-
-  const addStepField = () => {
-    setSteps([
-      ...steps(),
-      { instruction: "", number: steps().length + 1 }
-    ]);
-  };
-
-  const handleIngredientChange = (index: number, field: string, value: string) => {
-    const updatedIngredients = ingredients().map((ingredient, i) =>
-      i === index ? { ...ingredient, [field]: value } : ingredient
-    );
-    setIngredients(updatedIngredients);
-    if (field === "ingredient") {
-      setIngredientSuggestions(
-        availableIngredients.filter(ing => ing.name.toLowerCase().includes(value.toLowerCase()))
-      );
-    } else if (field === "unit") {
-      setUnitSuggestions(
-        availableUnits.filter(unit => unit.name.toLowerCase().includes(value.toLowerCase()))
-      );
-    }
-  };
-
-  const handleSuggestionClick = (
-    index: number,
-    field: string,
-    value: string,
-    idField: string,
-    id: number
-  ) => {
-    const updatedIngredients = ingredients().map((ingredient, i) =>
-      i === index ? { ...ingredient, [field]: value, [idField]: id } : ingredient
-    );
-    setIngredients(updatedIngredients);
-    setIngredientSuggestions([]);
-    setUnitSuggestions([]);
-  };
-
-  const handleStepChange = (index: number, value: string) => {
-    const updatedSteps = steps().map((step, i) =>
-      i === index ? { ...step, instruction: value } : step
-    );
-    setSteps(updatedSteps);
-  };
-
-  const handleSubmit = (e: Event) => {
-    e.preventDefault();
-    // Handle the form submission logic
-    console.log({
-      name: name(),
-      description: description(),
-      ingredients: ingredients(),
-      steps: steps()
-    });
-  };
-
-  return (
-    <div class='flex flex-1 flex-col g-1 bg-mid-beige py-5 px-1'>
-      <h1 class='text-center text-4xl'>New Recipe</h1>
-      <form onSubmit={handleSubmit}>
-        <div class='flex flex-col gap-2 mb-4'>
-          <label class='text-xl fw-bold text-black' for="name">Name</label>
-          <input
-            id="name"
-            type="text"
-            value={name()}
-            onInput={(e) => setName((e.target as HTMLInputElement).value)}
-            class='p-4 rounded-3xl border-2 border-light-beige text-black focus:outline-none focus:border-dark-beige'
-          />
-        </div>
-        <div class='flex flex-col gap-2 mb-4'>
-          <label class='text-xl fw-bold text-black' for="description">Description</label>
-          <textarea
-            id="description"
-            value={description()}
-            onInput={(e) => setDescription((e.target as HTMLTextAreaElement).value)}
-            rows="4"
-            class='p-4 rounded-3xl border-2 border-dark-beige bg-light-beige text-black resize-none fcous:outline-none focus:border-dark-beige'
-          />
-        </div>
-        <div class='flex flex-col gap-2 mb-4'>
-          <label class='text-xl fw-bold text-black'>Ingredients</label>
-          <For each={ingredients()}>
-            {(ingredient, index) => (
-              <div class='flex flex-col gap-2 mb4'>
-                <input
-                  type="text"
-                  placeholder="Ingredient"
-                  value={ingredient.ingredient}
-                  onInput={(e) => handleIngredientChange(index(), "ingredient", (e.target as HTMLInputElement).value)}
-                  class='p-4 rounded-3xl border-2 border-light-beige text-black focus:outline-none focus:border-dark-beige'
-                />
-                <div class='relative -mt-4 -mb-4'>
-                  <Show when={ingredientSuggestions().length > 0}>
-                    <div class='absolute z-50 bg-white border-zinc-200 border-1 rounded-3xl p-0 m-0 list-none'>
-                      <For each={ingredientSuggestions()}>
-                        {(suggestion) => (
-                          <li class='p-4 cursor-pointer hover:bg-mid-beige' onClick={() => handleSuggestionClick(index(), "ingredient", suggestion.name, "ingredientId", suggestion.id)}>
-                            {suggestion.name}
-                          </li>
-                        )}
-                      </For>
-                    </div>
-                  </Show>
-                </div>
-                <input
-                  type="text"
-                  placeholder="Unit"
-                  value={ingredient.unit}
-                  onInput={(e) => handleIngredientChange(index(), "unit", (e.target as HTMLInputElement).value)}
-                  class='p-4 rounded-3xl border-2 border-light-beige text-black focus:outline-none focus:border-dark-beige'
-                />
-                <div class='relative -mt-4 -mb-4'>
-                  <Show when={unitSuggestions().length > 0}>
-                    <div class='absolute z-50 bg-white border-zinc-200 border-1 rounded-3xl p-0 m-0 list-none'>
-                      <For each={unitSuggestions()}>
-                        {(suggestion) => (
-                          <li class='p-4 cursor-pointer hover:bg-mid-beige' onClick={() => handleSuggestionClick(index(), "unit", suggestion.name, "unitId", suggestion.id)}>
-                            {suggestion.name}
-                          </li>
-                        )}
-                      </For>
-                    </div>
-                  </Show>
-                </div>
-                <input
-                  type="number"
-                  placeholder="Quantity"
-                  value={ingredient.quantity}
-                  onInput={(e) => handleIngredientChange(index(), "quantity", (e.target as HTMLInputElement).value)}
-                  class='p-4 rounded-3xl border-2 border-light-beige text-black focus:outline-none focus:border-dark-beige'
-
-                />
-              </div>
-            )}
-          </For>
-          <button type="button"
-            onClick={addIngredientField}
-            class="px-4 py-8 border-0 rounded-3xl bg-dark-beige text-white text-base cursor-pointer transition ease duration-300 hover:bg-dark-beige max-[768px]:p-4 max-[768px]:text-base" >
-            Add Ingredient</button>
-        </div>
-        <div class='flex flex-col gap-2 mb-4'>
-          <label class='text-xl fw-bold text-black'>Steps</label>
-          <For each={steps()}>
-            {(step, index) => (
-              <div class='flex flex-col gap-2 mb-4'>
-                <label class='text-xl fw-bold text-black'>Step {index() + 1}</label>
-                <textarea
-                  value={step.instruction}
-                  onInput={(e) => handleStepChange(index(), (e.target as HTMLTextAreaElement).value)}
-                  rows="2"
-                  class='p-4 rounded-3xl border-2 border-dark-beige bg-light-beige text-black resize-none fcous:outline-none focus:border-dark-beige'
-                />
-              </div>
-            )}
-          </For>
-          <button type="button"
-            onClick={addStepField}
-            class="px-4 py-8 border-0 rounded-3xl bg-dark-beige text-white text-base cursor-pointer transition ease duration-300 hover:bg-dark-beige max-[768px]:p-4 max-[768px]:text-base" >Add Step</button>
-        </div>
-        <button
-          type="submit"
-          class="px-4 py-8 border-0 rounded-3xl bg-dark-beige text-white text-base cursor-pointer transition ease duration-300 hover:bg-dark-beige max-[768px]:p-4 max-[768px]:text-base" >
-          Save Recipe</button>
-      </form>
+  const [name, setName] = createSignal('');
+  const [description, setDescription] = createSignal("Omg I love Vegan meat, it’s literally the best. It literally tastes like awesomeness. Though I’ve only had it once, it really blew my mind. The texture and flavor were so close to real meat that I couldn't believe it.");
+  const {ingredients: allIngredients} = useIngredients();
+  const allIngredientsOptions = createOptions(allIngredients(), {key: "singular_name"});
+  return <div class='bg-japanese-light-blue min-h-[100dvh] mx-3 mt-2 rounded-t-3xl'>
+    <div class='bg-foggy-gray mt-3 rounded-t-3xl p-2 mx-2'>
+      <h1 class='text-2xl w-fit mx-auto underline'>New Recipe</h1>
     </div>
-  );
+    <div class='mt-2'>
+      <h2 class='text-xl w-fit mx-auto text-center'>Give your recipe a <span class='text-white bg-bento-red rounded-3xl px-2 py-0.5'>name!</span></h2>
+    </div>
+    <input class='w-full bg-bento-red text-white underline p-3 my-3 text-center placeholder:text-white placeholder:italic'
+      type="text" placeholder='Here goes the name...'
+      onChange={(e) => setName(e.currentTarget.value)}
+      value={name()} />
+    <div class='mt-2'>
+      <h2 class='text-xl w-fit mx-auto text-center'>Write a short <span class='text-white bg-bento-red rounded-3xl px-2 py-0.5'>description!</span></h2>
+    </div>
+    <div class='px-2'>
+      <textarea name="description" 
+        placeholder="Here goes the description..."
+        onChange={(e) => setDescription(e.currentTarget.value)}
+        value={description()}
+        class='box-border rounded-bl-2xl rounded-r-2xl rounded bg-foggy-gray w-full my-3 p-3 h-[7rem]'
+      />
+    </div>
+    <div class='mt-2'>
+      <h2 class='text-xl w-fit mx-auto text-center'>Now let's start adding the <br /> <span class='text-white bg-bento-red rounded-3xl px-2 py-0.5'>ingredients...</span></h2>
+    </div>
+    <div class='flex gap-2 px-2 mt-3 justify-center'>
+      <div class='text-white bg-bento-red rounded-2xl px-3'><Select {...allIngredientsOptions} /></div>
+      <div  class='text-black bg-white rounded-2xl px-5'><span>unit</span></div>
+      <div  class='text-white bg-forest-green rounded-2xl px-3'><span>quantity</span></div>
+    </div>
+  </div>
+
 };
 
 export default NewRecipePage;

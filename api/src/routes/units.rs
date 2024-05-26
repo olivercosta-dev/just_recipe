@@ -13,7 +13,7 @@ use crate::{
         Unit,
     },
     utilities::{
-        fetchers::{fetch_unit, fetch_units_with_pagination},
+        fetchers::{fetch_all_units, fetch_unit, fetch_units_with_pagination},
         queries::PaginationQuery,
     },
 };
@@ -98,4 +98,11 @@ pub async fn get_units_by_query_handler(
         next_start_from,
     };
     Ok(Json(response))
+}
+
+pub async fn get_all_units_handler(
+    State(state): State<AppState>,
+) -> Result<Json<Vec<Unit>>, AppError> {
+    let units = fetch_all_units(&state.pool).await?;
+    Ok(Json(units))
 }

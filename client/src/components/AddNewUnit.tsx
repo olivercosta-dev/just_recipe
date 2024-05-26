@@ -1,19 +1,15 @@
 import addNewIcon from '../assets/add-new-icon.svg';
 import { createSignal, Component } from 'solid-js';
 import baseUrl from '../baseUrl';
-import { Unit } from '../interfaces';
-
-interface AddNewUnitProps {
-  onAdd: (unit: Unit) => void;
-}
-
-const AddNewUnit: Component<AddNewUnitProps> = (props) => {
+import { useUnits } from '../UnitsProvider';
+const AddNewUnit: Component = (props) => {
   let dialogRef: HTMLDialogElement | undefined;
 
   const [singularName, setSingularName] = createSignal('');
   const [pluralName, setPluralName] = createSignal('');
-  const [submitButtonText, setSubmitButtonText] = createSignal('Add unit');
+  const [submitButtonText, setSubmitButtonText] = createSignal('Add Unit');
   const [submitButtonClass, setSubmitButtonClass] = createSignal('');
+  const { fetchUnits } = useUnits();
 
   const showDialog = () => {
     dialogRef?.showModal();
@@ -33,7 +29,7 @@ const AddNewUnit: Component<AddNewUnitProps> = (props) => {
       const response = await fetch(`${baseUrl}/units`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify(formData),
       });
@@ -41,7 +37,7 @@ const AddNewUnit: Component<AddNewUnitProps> = (props) => {
       if (response.ok) {
         setSubmitButtonText('Added Successfully');
         setSubmitButtonClass('success');
-        props.onAdd(formData);
+        fetchUnits();
         closeDialog();
       } else {
         setSubmitButtonText('Failed to Add');
@@ -51,18 +47,17 @@ const AddNewUnit: Component<AddNewUnitProps> = (props) => {
       setSubmitButtonText('Failed to Add');
       setSubmitButtonClass('error');
     }
-
-    // Reset button text and class after a delay
+    fetchUnits();
     setTimeout(() => {
-      setSubmitButtonText('Add unit');
+      setSubmitButtonText('Add Unit');
       setSubmitButtonClass('');
-    }, 3000);
+    }, 1000);
   };
 
   return (
     <>
       <div
-        class="flex flex-col items-center justify-center bg-gray-200 rounded-3xl p-2 shadow hover:scale-105 transition-transform cursor-pointer"
+        class="flex flex-col items-stretch justify-center bg-gray-200 rounded-3xl p-2 shadow hover:scale-105 transition-transform cursor-pointer"
         onClick={showDialog}
       >
         <img src={addNewIcon} alt="Add New Icon" class="min-h-12 max-h-16 aspect-square" />
@@ -70,7 +65,7 @@ const AddNewUnit: Component<AddNewUnitProps> = (props) => {
       </div>
       <dialog
         ref={(el) => (dialogRef = el)}
-        class="border-none p-4 rounded-xl shadow-lg bg-white w-full max-w-md absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2"
+        class="border-none p-4 rounded-xl shadow-lg bg-white w-full max-w-md absolute font-sans left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2"
       >
         <div class="flex flex-col items-center">
           <button
@@ -109,9 +104,7 @@ const AddNewUnit: Component<AddNewUnitProps> = (props) => {
             />
             <button
               type="submit"
-              class={`p-2 bg-red-500 text-white rounded-3xl text-base mt-4 w-full ${
-                submitButtonClass() === 'success' ? 'bg-green-500' : ''
-              } ${submitButtonClass() === 'error' ? 'bg-red-700' : ''} hover:bg-red-400`}
+              class={`p-2 bg-red-500 text-white rounded-3xl text-base mt-4 w-full ${submitButtonClass() === 'success' ? 'bg-green-500' : ''} ${submitButtonClass() === 'error' ? 'bg-red-700' : ''} hover:bg-red-400`}
             >
               {submitButtonText()}
             </button>

@@ -17,7 +17,7 @@ const Navbar: Component = () => {
         <img src={menuIcon} onClick={toggleMenu} class="h-8 cursor-pointer" />
       </div>
       <div
-        class={`absolute top-16 right-5 bg-white shadow-lg rounded-3xl overflow-hidden ${
+        class={`absolute top-16 right-5 bg-white shadow-lg rounded-2xl overflow-hidden ${
           isOpen() ? 'block' : 'hidden'
         }`}
       >

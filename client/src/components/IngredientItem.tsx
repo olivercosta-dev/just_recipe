@@ -38,8 +38,14 @@ const IngredientItem: Component<IngredientItemProps> = ({ ingredient, refetchIng
   };
 
   return (
-    <div class="group flex flex-col items-stretch justify-center relative bg-gray-200 rounded-3xl p-2 shadow hover:opacity-50">
-      <img src={carrotIcon} alt={ingredient.singular_name} class="min-h-12 max-h-16 aspect-square" />
+    <div class="group 
+    flex flex-col 
+    items-stretch 
+    justify-center 
+    relative bg-gray-200 
+    rounded-3xl p-2 shadow">
+      <img src={carrotIcon} alt={ingredient.singular_name}
+       class="min-h-12 max-h-16 aspect-square group-hover:opacity-50" />
       <button
         onClick={handleDelete}
         class="

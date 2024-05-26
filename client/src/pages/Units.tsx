@@ -1,55 +1,43 @@
-import { createSignal, createResource, For, Component } from 'solid-js';
-import baseUrl from '../baseUrl';
+import { For, Component, Show, onMount, createSignal } from 'solid-js';
 import AddNewUnit from '../components/AddNewUnit';
 import UnitItem from '../components/UnitItem';
+import { useUnits } from '../UnitsProvider';
 import { Unit } from '../interfaces';
 
-// Fetch units with proper typing
-const fetchUnits = async (startFrom: number): Promise<Unit[]> => {
-  const defaultLimit = 4;
-  const response = await fetch(`${baseUrl}/units?startFrom=${startFrom}&limit=${defaultLimit}`);
-  const data = await response.json();
-  return data.units;
-};
-
 const Units: Component = () => {
-  const defaultLimit = 4;
-  const [startFrom, setStartFrom] = createSignal(0);
-  const [units, { mutate }] = createResource<Unit[], number>(startFrom, fetchUnits);
+  const [searchInput, setSearchInput] = createSignal('');
 
-  const removeUnit = (unitId: string) => {
-    mutate((prevUnits) =>
-      prevUnits?.filter((unit) => unit.unit_id !== unitId) || []
-    );
-  };
-
-  const addUnit = (newUnit: Unit) => {
-    mutate((prevUnits) => [newUnit, ...(prevUnits || [])]);
-  };
+  const { units, fetchUnits } = useUnits();
+  const filteredUnits = (): Unit[] => {
+    return units().filter(unit => unit.singular_name.includes(searchInput()) || unit.plural_name.includes(searchInput()));
+  }
+  onMount(() => {
+    fetchUnits();
+  });
 
   return (
-    <div class="min-h-full p-4 bg-beige flex flex-col gap-4 flex-1">
-      <div class="grid justify-center items-center align-content-center grid-cols-3">
-        <div></div>
-        <div class="flex justify-center">
-          <h1 class="text-4xl">Available units</h1>
-        </div>
-        <div></div>
+    <div class="min-h-full p-4 bg-beige flex flex-col gap-4 flex-1 py-5 bg-mid-beige">
+      <div class="">
+          <h1 class="text-3xl text-center">Available units</h1>
       </div>
-      <div class="flex justify-stretch items-stretch mx-4">
+      <div class="flex justify-stretch items-stretch mx-4 col-span-4">
         <input
           type="text"
-          placeholder="Searching for a unit? Click here!"
-          class="w-full rounded-3xl p-2 text-center border border-black"
+          placeholder="Searching for an unit? Click here!"
+          onInput={(e) => setSearchInput(e.currentTarget.value.toLowerCase())}
+          class="w-full rounded-3xl py-1 px-3 text-center border border-black max-w-96 mx-auto"
         />
       </div>
-      <div class="grid grid-cols-auto-fill gap-4" style={{ "grid-template-columns": 'repeat(auto-fill, minmax(6rem, 1fr))' }}>
-        <AddNewUnit onAdd={addUnit} />
-        <For each={units()}>
+      <div class="grid grid-cols-auto-fill gap-4 max-auto" style={{ 'grid-template-columns': 'repeat(auto-fill, minmax(6rem, 1fr))' }}>
+        <AddNewUnit />
+        <Show when={units() === null || units === undefined}>
+          <div>Loading units...</div>
+        </Show>
+        <For each={filteredUnits()}>
           {(unit) => (
             <UnitItem
               unit={unit}
-              onDelete={removeUnit}
+              refetchUnits={fetchUnits}
             />
           )}
         </For>

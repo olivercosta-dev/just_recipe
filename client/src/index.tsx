@@ -3,9 +3,9 @@ import { render } from 'solid-js/web';
 
 import './index.css';
 import App from './App';
-import { IngredientsProvider } from './IngredientsProvier';
+import { GlobalProvider } from './GlobalContext';
 
-const root = document.getElementById('root');
+const root = document.getElementById('root')!;
 
 if (import.meta.env.DEV && !(root instanceof HTMLElement)) {
   throw new Error(
@@ -13,4 +13,4 @@ if (import.meta.env.DEV && !(root instanceof HTMLElement)) {
   );
 }
 
-render(() => <IngredientsProvider><App /></IngredientsProvider>, root);
+render(() => <GlobalProvider><App /></GlobalProvider>, root);
