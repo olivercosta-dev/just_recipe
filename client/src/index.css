@@ -12,7 +12,8 @@
 }
 
 
-body,#root {
+body,
+#root {
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
@@ -27,8 +28,92 @@ body,#root {
 }
 
 .explore-card-info {
-  gap: 0.5rem; /* This needs to be added as a ts varaible maybe?*/
+  gap: 0.5rem;
+  /* This needs to be added as a ts varaible maybe?*/
 }
+
 :hover>.full-opacity-when-parent-hovered {
   opacity: 100 !important;
+}
+
+/* SOLID SELECT */
+.i-select.solid-select-container,
+.u-select.solid-select-container {
+  position: relative;
+  min-width: 8ch;
+}
+
+/* .i-select>.solid-select-control {} */
+
+.i-select .solid-select-option mark,
+.u-select .solid-select-option mark {
+  transition: all 250ms;
+  background-color: black;
+  color: white;
+  border-radius: 1rem;
+}
+
+.i-select>.solid-select-control>.solid-select-input,
+.u-select>.solid-select-control>.solid-select-input {
+  background-color: transparent;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+}
+
+.i-select>.solid-select-control>.solid-select-input:hover,
+.i-select>.solid-select-control>.solid-select-input:focus,
+.i-select>.solid-select-control>.solid-select-input:active,
+.u-select>.solid-select-control>.solid-select-input:hover,
+.u-select>.solid-select-control>.solid-select-input:focus,
+.u-select>.solid-select-control>.solid-select-input:active {
+  outline: 0;
+}
+
+.i-select.solid-select-container>.solid-select-list,
+.u-select.solid-select-container>.solid-select-list {
+  margin-top: 0.1rem;
+  position: absolute;
+  max-height: 6rem;
+  overflow-y: auto;
+  padding-right: 0.75rem;
+  padding-left: 0.75rem;
+  min-width: 100%;
+  left: 0;
+  border-radius: 1rem;
+  overflow-x: hidden;
+  z-index: 999;
+}
+.i-select.solid-select-container>.solid-select-list{
+  background-color: #FE452A;
+}
+.u-select.solid-select-container>.solid-select-list{
+  background-color: white;
+}
+
+/* .i-select.solid-select-container .solid-select-list-placeholder {}
+.u-select.solid-select-container .solid-select-list-placeholder {} */
+
+/* The options have: data-disabled=true/false and data-focused=true/false 
+they are all divs*/
+.i-select.solid-select-container>.solid-select-list>.solid-select-option,
+.u-select.solid-select-container>.solid-select-list>.solid-select-option
+{
+  transition: all 250ms;
+  cursor: pointer;
+  border-bottom-right-radius: 1rem;
+  border-top-right-radius: 1rem;
+}
+
+.i-select.solid-select-container>.solid-select-list>.solid-select-option:hover {
+  background-color: #B5C6F5;
+  color: black;
+}
+.u-select.solid-select-container>.solid-select-list>.solid-select-option:hover {
+  background-color: black;
+  color: white;
 }
