@@ -1,7 +1,7 @@
 use super::state::AppState;
 use crate::{
     routes::{
-        add_ingredient_handler, add_recipe_handler, add_unit_handler, get_all_ingredients_handler, get_ingredient_by_id_handler, get_ingredients_by_query_handler, get_recipe_by_query_handler, get_recipe_handler, get_unit_handler, get_units_by_query_handler, health_check, remove_ingredient_handler, remove_recipe_handler, remove_unit_handler, update_ingredient_handler, update_recipe_handler, update_unit_handler
+        add_ingredient_handler, add_recipe_handler, add_unit_handler, get_all_ingredients_handler, get_all_units_handler, get_ingredient_by_id_handler, get_ingredients_by_query_handler, get_recipe_by_query_handler, get_recipe_handler, get_unit_handler, get_units_by_query_handler, health_check, remove_ingredient_handler, remove_recipe_handler, remove_unit_handler, update_ingredient_handler, update_recipe_handler, update_unit_handler
     },
     utilities::fetchers::{fetch_all_ingredient_ids, fetch_all_unit_ids},
 };
@@ -66,6 +66,7 @@ impl App {
                 "/units/:unit_id",
                 put(update_unit_handler).get(get_unit_handler),
             )
+            .route("/units/all", get(get_all_units_handler))
             .route(
                 "/ingredients",
                 post(add_ingredient_handler)

@@ -357,3 +357,18 @@ pub async fn fetch_all_ingredients<'a>(
         .fetch_all(executor)
         .await?)
 }
+
+pub async fn fetch_all_units<'a>(
+    executor: impl Executor<'_, Database = Postgres>,
+) -> Result<Vec<Unit>, AppError> {
+    Ok(sqlx::query_as!(
+            Unit,
+            r#"
+                SELECT *
+                FROM unit
+                ORDER BY singular_name;
+            "#
+        )
+        .fetch_all(executor)
+        .await?)
+}

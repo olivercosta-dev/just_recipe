@@ -117,3 +117,40 @@ async fn getting_units_with_wrong_parameters_returns_404_bad_request(pool: PgPoo
 
     Ok(())
 }
+
+#[sqlx::test(fixtures(path = "../fixtures", scripts("units")))]
+async fn getting_all_units_returns_all_units(pool: PgPool) -> sqlx::Result<()> {
+    let request = create_get_request_to("units/all", None, None, json!({}));
+    let app_state = AppState::new(pool);
+    let app = App::new(app_state.clone(), default::Default::default(), 0).await;
+    let response = app
+        .router
+        .oneshot(request)
+        .await
+        .expect("should have gotten a response");
+    let bytes = to_bytes(response.into_body(), usize::MAX)
+        .await
+        .expect("Failed to read body bytes");
+    let response_units: Vec<Unit> =
+        serde_json::from_slice(&bytes).expect("Failed to deserialize JSON");
+
+    let db_units = sqlx::query_as!(
+        Unit,
+        r#"
+            SELECT *
+            FROM unit
+            ORDER BY singular_name
+        "#,
+    )
+    .fetch_all(&app_state.pool)
+    .await?;
+    assert_eq!(response_units.len(), db_units.len());
+    // Because both should be in order by singular_name
+    db_units
+        .iter()
+        .zip(response_units.iter())
+        .for_each(|(db, resp)| {
+            assert_eq!(db, resp);
+        });
+    Ok(())
+}
