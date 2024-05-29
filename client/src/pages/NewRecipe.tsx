@@ -4,15 +4,16 @@ import { Select, createOptions } from '@thisbeyond/solid-select';
 import { useUnits } from '../UnitsProvider';
 import { Ingredient, Unit } from '../interfaces';
 import { createStore } from 'solid-js/store';
+import baseUrl from '../baseUrl';
 
 interface RecipeIngredient {
-  ingredientId?: number;
-  unitId?: number;
+  ingredient_id?: number;
+  unit_id?: number;
   quantity: string;
 }
 
 interface RecipeStep {
-  stepNumber: number,
+  step_number: number,
   instruction: string
 }
 const NewRecipePage: Component = () => {
@@ -25,18 +26,18 @@ const NewRecipePage: Component = () => {
   });
 
   const [name, setName] = createSignal('');
-  const [description, setDescription] = createSignal('Omg I love Vegan meat, it’s literally the best. It literally tastes like awesomeness. Though I’ve only had it once, it really blew my mind. The texture and flavor were so close to real meat that I couldn\'t believe it.');
+  const [description, setDescription] = createSignal("");
 
   const [recipeIngredients, setRecipeIngredients] = createStore<RecipeIngredient[]>([
     {
-      ingredientId: 0,
-      unitId: 0,
+      ingredient_id: 0,
+      unit_id: 0,
       quantity: '0'
     }
   ]);
   const [recipeSteps, setRecipeSteps] = createStore<RecipeStep[]>([
     {
-      stepNumber: 1,
+      step_number: 1,
       instruction: ""
     }
   ]);
@@ -44,11 +45,11 @@ const NewRecipePage: Component = () => {
   const allUnitOptions = createOptions(allUnits, { key: 'singular_name' });
 
   const addNewRecipeIngredient = () => {
-    setRecipeIngredients([...recipeIngredients, { ingredientId: 0, unitId: 0, quantity: '0' }]);
+    setRecipeIngredients([...recipeIngredients, { ingredient_id: 0, unit_id: 0, quantity: '0' }]);
   };
   const addNewRecipeStep = () => {
-    const newStepNumber = recipeSteps.length + 2;
-    setRecipeSteps([...recipeSteps, { stepNumber: newStepNumber, instruction: "" }]);
+    const newStepNumber = recipeSteps.length + 1;
+    setRecipeSteps([...recipeSteps, { step_number: newStepNumber, instruction: "" }]);
   };
   const setRecipeStep = (index: number, newInstruction: string) => {
     setRecipeSteps(index, 'instruction', newInstruction);
@@ -56,29 +57,58 @@ const NewRecipePage: Component = () => {
   const removeRecipeStep = (index: number) => {
     setRecipeSteps(
       recipeSteps
-        .map((someData, innerIndex) => {
-          if (innerIndex === index) {
+        .map((step, currentIndex) => {
+          if (currentIndex === index) {
             // Skip the step to be removed
             return null;
-          } else if (innerIndex > index) {
+          } else if (currentIndex > index) {
             // Decrease the step number for steps after the removed step
-            return { ...someData, stepNumber: someData.stepNumber - 1 };
+            return { ...step, step_number: currentIndex };
           } else {
             // Return the step as is for steps before the removed step
-            return someData;
+            return step;
           }
         })
-        .filter(someData => someData !== null) // Remove the null step
+        .filter(step => step !== null) // Remove the null step
     );
+    console.log(recipeSteps);
   };
   const setIngredientId = (index: number, newIngredientId: number) => {
-    setRecipeIngredients(index, 'ingredientId', newIngredientId);
+    setRecipeIngredients(index, 'ingredient_id', newIngredientId);
   };
 
   const setUnitId = (index: number, newUnitId: number) => {
-    setRecipeIngredients(index, 'unitId', newUnitId);
+    setRecipeIngredients(index, 'unit_id', newUnitId);
   };
-
+  const [saveButtonText, setSaveButtonText] = createSignal<string>('Save');
+  const handleSaveRecipe = async () => {
+    try {
+      const response = await fetch(`${baseUrl}/recipes`, {
+        method: 'POST',
+        headers: {
+          'Content-type': 'application/json'
+        },
+        body: JSON.stringify(
+          {
+            'name': name(),
+            'description': description(),
+            'ingredients': recipeIngredients,
+            'steps': recipeSteps,
+          }
+        )
+      })
+      if (response.ok) {
+        setSaveButtonText('Added Successfully');
+      } else {
+        setSaveButtonText('Failed to Add');
+      }
+    } catch (error) {
+      setSaveButtonText('Failed to Add');
+    }
+    setTimeout(() => {
+      setSaveButtonText('Save');
+    }, 1000);
+  }
   return (
     <div class='bg-japanese-light-blue min-h-[100dvh] mx-3 mt-2 rounded-t-3xl'>
       <div class='bg-foggy-gray mt-3 rounded-t-3xl p-2 mx-2'>
@@ -126,13 +156,13 @@ const NewRecipePage: Component = () => {
       <button class='mx-auto block my-5 bg-[#3A9DFB] text-white rounded-2xl px-2 py-1' onClick={addNewRecipeIngredient}>
         Add New
       </button>
-      <h2 class='text-xl w-fit mx-auto text-center my-8'>So far so good!</h2>
+      <h2 class='text-2xl w-fit mx-auto text-center my-8'>So far so good!</h2>
       <h2 class='text-xl w-fit mx-auto text-center'>Now it's time to bring it all together with the <span class='text-white bg-bento-red rounded-3xl px-2 py-0.5'>instructions!</span></h2>
       <For each={recipeSteps}>
         {
           (step, index) => (
             <div class='flex flex-row justify-center my-5   min-h-[5rem]'>
-              <div class='rounded-s-full flex justify-center items-center mr-2 underline underline-offset-2'><span>Step {index() + 1}</span></div>
+              <div class='rounded-s-full flex justify-center items-center mr-2 underline underline-offset-2'><span>Step {step.step_number}</span></div>
               <div class='flex'>
                 <textarea
                   name='description'
@@ -151,6 +181,11 @@ const NewRecipePage: Component = () => {
       <button class='mx-auto block my-5 bg-[#3A9DFB] text-white rounded-2xl px-2 py-1' onClick={addNewRecipeStep}>
         Add New
       </button>
+      <h2 class='text-xl w-fit mx-auto text-center my-5 italic'>Ready to save?</h2>
+      <div class='flex mt-5 justify-around mb-10'>
+        <button class='px-5 bg-red-500 text-white rounded-2xl'>Cancel</button>
+        <button class='px-6 bg-green-600 text-white rounded-2xl' onClick={handleSaveRecipe}>{saveButtonText()}</button>
+      </div>
     </div>
   );
 };
