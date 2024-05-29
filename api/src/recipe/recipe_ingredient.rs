@@ -14,7 +14,7 @@ pub trait RecipeIngredient {
 }
 // This is so recipe_id doesn't get flagged
 #[allow(dead_code)]
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct CompactRecipeIngredient {
     #[serde(skip)]
     pub(crate) recipe_id: i32,
@@ -24,7 +24,7 @@ pub struct CompactRecipeIngredient {
 }
 // This is so recipe_id doesn't get flagged
 #[allow(dead_code)]
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct DetailedRecipeIngredient {
     #[serde(skip)]
     pub(crate) recipe_id: i32,

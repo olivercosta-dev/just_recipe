@@ -4,6 +4,7 @@ use axum::{
     Json,
 };
 use serde::{Deserialize, Serialize};
+use tracing::{info, instrument};
 
 use crate::{
     application::{error::AppError, state::AppState},
@@ -17,44 +18,21 @@ use crate::{
     },
     utilities::{fetchers::fetch_recipe_detailed, queries::PaginationQuery},
 };
-
-/* Example request:
-{
-    "name": "Very Tasty Soup",
-    "description": "Finger-licking Good!",
-    "ingredients": [
-        {
-            "ingredient_id": 1,
-            "unit_id": 1,
-            "quantity": "3/4",
-        },
-        {
-            "ingredient_id": 1,
-            "unit_id": 2,
-            "quantity": "1/2",
-        }
-    ],
-    "steps": [
-        {
-            "step_number": 1,
-            "instruction": "Put the apple in boiling hot water."
-        },
-        {
-            "step_number": 2,
-            "instruction": "Eat the apple."
-        }
-    ]
-}
-*/
+#[instrument]
 pub async fn add_recipe_handler(
     State(app_state): State<AppState>,
     Json(recipe): Json<Recipe<CompactRecipeIngredient, NotBacked>>,
 ) -> Result<StatusCode, AppError> {
     let recipe = recipe.validate()?;
+    info!("Beginning transaction");
     let mut transaction = app_state.pool.begin().await?;
+    info!("Inserting recipe to db");
     let recipe_id = insert_recipe(&recipe, &mut *transaction).await?;
+    info!("Inserting ingredients to db");
     bulk_insert_recipe_ingredients(recipe.ingredients(), recipe_id, &mut *transaction).await?;
+    info!("Inserting steps to db");
     bulk_insert_steps(recipe.steps(), recipe_id, &mut *transaction).await?;
+    info!("Committing transaction");
     transaction.commit().await?;
     Ok(StatusCode::NO_CONTENT)
 }

@@ -25,7 +25,9 @@ pub struct Recipe<I: RecipeIngredient, BackedState = NotBacked> {
     #[serde(skip)]
     backed_state: PhantomData<BackedState>,
 }
+#[derive(Debug)]
 pub struct Backed;
+#[derive(Debug)]
 pub struct NotBacked;
 
 // General implementations for ALL recipe states/types.

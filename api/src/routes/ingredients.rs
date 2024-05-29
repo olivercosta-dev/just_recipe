@@ -34,7 +34,8 @@ pub async fn add_ingredient_handler(
 fn cache_ingredient_id(ingredient_id: i32, app_state: AppState) {
     app_state.ingredient_ids.insert(ingredient_id);
 }
-// TODO (oliver): This should use Path instead of a json!
+
+// TODO (oliver): This should use Path<i32> instead of a json!
 pub async fn remove_ingredient_handler(
     State(app_state): State<AppState>,
     Json(delete_ingredient_request): Json<RemoveIngredientRequest>,

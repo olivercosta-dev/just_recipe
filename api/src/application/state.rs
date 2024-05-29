@@ -5,7 +5,7 @@ use sqlx::PgPool;
 // NOTE : because AppState is just used in the router
 // NOTE : And it's always going to be cloned anyways, as it's cheap
 // NOTE : As it is an Arc<Mutex<T>>
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct AppState {
     pub pool: PgPool,
     pub unit_ids: DashSet<i32>,

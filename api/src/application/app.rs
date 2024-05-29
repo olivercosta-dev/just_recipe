@@ -10,7 +10,7 @@ use axum::{
 };
 use tower_http::cors::{Any, CorsLayer};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct App {
     url: String,
     port: i32,
