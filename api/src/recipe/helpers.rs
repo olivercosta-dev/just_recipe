@@ -1,4 +1,6 @@
 use sqlx::{postgres::PgQueryResult, Executor, Postgres};
+use tower::util::error;
+use tracing::{info, instrument};
 
 use crate::application::{
     error::{AppError, RecipeParsingError},
@@ -62,6 +64,7 @@ pub async fn insert_recipe<I: RecipeIngredient, NotBacked>(
 /// - The query to insert the ingredients into the database fails.
 /// - There is a foreign key violation (invalid ingredient ID).
 /// - There is a unique constraint violation (duplicate ingredient ID).
+#[instrument]
 pub async fn bulk_insert_recipe_ingredients(
     ingredients: &[CompactRecipeIngredient],
     recipe_id: i32,
@@ -94,12 +97,13 @@ pub async fn bulk_insert_recipe_ingredients(
     .await
     {
         Ok(_) => Ok(()),
-        Err(SqlxError::Database(db_err)) if db_err.is_foreign_key_violation() => Err(
-            AppError::RecipeParsingError(RecipeParsingError::InvalidIngredientId),
-        ),
-        Err(SqlxError::Database(db_err)) if db_err.is_unique_violation() => Err(
-            AppError::RecipeParsingError(RecipeParsingError::DuplicateIngredientId),
-        ),
+        Err(SqlxError::Database(db_err)) if db_err.is_foreign_key_violation() => {
+            info!("Something unexpected has happened!");
+            Err(AppError::RecipeParsingError(RecipeParsingError::InvalidIngredientId))
+        }
+        Err(SqlxError::Database(db_err)) if db_err.is_unique_violation() => {
+            Err(AppError::RecipeParsingError(RecipeParsingError::DuplicateIngredientId))
+        }
         Err(_) => Err(AppError::InternalServerError),
     }
 }
@@ -266,7 +270,9 @@ mod test {
                 delete_recipe_steps, insert_recipe, update_recipe,
             },
             recipe::{NotBacked, Recipe},
-            recipe_ingredient::{CompactRecipeIngredient, DetailedRecipeIngredient, RecipeIngredient},
+            recipe_ingredient::{
+                CompactRecipeIngredient, DetailedRecipeIngredient, RecipeIngredient,
+            },
         },
         utilities::{
             fetchers::fetch_ingredients_and_units,
@@ -404,10 +410,11 @@ mod test {
 
         Ok(())
     }
-    
-    #[sqlx::test(fixtures(path = "../../tests/fixtures", scripts("ingredients","units")))]
+
+    #[sqlx::test(fixtures(path = "../../tests/fixtures", scripts("ingredients", "units")))]
     async fn test_insert_recipe(pool: PgPool) -> sqlx::Result<()> {
-        let recipe: Recipe<CompactRecipeIngredient, NotBacked> = Recipe::<CompactRecipeIngredient>::create_dummy_without_id(&pool).await;
+        let recipe: Recipe<CompactRecipeIngredient, NotBacked> =
+            Recipe::<CompactRecipeIngredient>::create_dummy_without_id(&pool).await;
         // Call the function to insert the recipe
         let recipe_id = insert_recipe(&recipe, &pool).await.unwrap();
 
