@@ -1,6 +1,7 @@
 use axum::extract::Query;
 use dashmap::DashSet;
 use sqlx::{Executor, PgPool, Postgres};
+use tracing::instrument;
 
 use crate::{
     application::error::AppError,
@@ -188,6 +189,7 @@ pub async fn fetch_unit(pool: &PgPool, unit_id: i32) -> Result<Unit, AppError> {
 /// This function returns an `AppError` if:
 /// - The query to fetch the recipe from the database fails.
 /// - The recipe with the specified ID is not found.
+#[instrument(ret, err)]
 pub async fn fetch_recipe_detailed(
     pool: &PgPool,
     recipe_id: i32,
@@ -343,7 +345,7 @@ pub async fn fetch_ingredient(pool: &PgPool, ingredient_id: i32) -> Result<Ingre
     Ok(ingredient)
 }
 
-pub async fn fetch_all_ingredients<'a>(
+pub async fn fetch_all_ingredients(
     executor: impl Executor<'_, Database = Postgres>,
 ) -> Result<Vec<Ingredient>, AppError> {
     Ok(sqlx::query_as!(
@@ -358,7 +360,7 @@ pub async fn fetch_all_ingredients<'a>(
         .await?)
 }
 
-pub async fn fetch_all_units<'a>(
+pub async fn fetch_all_units(
     executor: impl Executor<'_, Database = Postgres>,
 ) -> Result<Vec<Unit>, AppError> {
     Ok(sqlx::query_as!(

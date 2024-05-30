@@ -4,7 +4,7 @@ use axum::{
     Json,
 };
 use serde::{Deserialize, Serialize};
-use tracing::{info, instrument};
+use tracing::{error, info, instrument};
 
 use crate::{
     application::{error::AppError, state::AppState},
@@ -18,14 +18,14 @@ use crate::{
     },
     utilities::{fetchers::fetch_recipe_detailed, queries::PaginationQuery},
 };
-#[instrument(ret, err, skip(app_state))]
+#[instrument(ret, err, skip(state))]
 pub async fn add_recipe_handler(
-    State(app_state): State<AppState>,
+    State(state): State<AppState>,
     Json(recipe): Json<Recipe<CompactRecipeIngredient, NotBacked>>,
 ) -> Result<StatusCode, AppError> {
     let recipe = recipe.validate()?;
     info!("Beginning transaction.");
-    let mut transaction = app_state.pool.begin().await?;
+    let mut transaction = state.pool.begin().await?;
     info!("Inserting recipe to db.");
     let recipe_id = insert_recipe(&recipe, &mut *transaction).await?;
     info!("Inserting ingredients to db.");
@@ -37,21 +37,22 @@ pub async fn add_recipe_handler(
     Ok(StatusCode::NO_CONTENT)
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct RemoveRecipeRequest {
     pub recipe_id: i32,
 }
 // NOTE (oliver): Deleting a recipe_id will cascade on a database level.
-// NOTE (oliver): That is why only that is deleted.
+// NOTE (oliver): That is why only that is deleted manually.
+#[instrument(ret, err, skip(state))]
 pub async fn remove_recipe_handler(
-    State(app_state): State<AppState>,
+    State(state): State<AppState>,
     Json(remove_recipe_request): Json<RemoveRecipeRequest>,
 ) -> Result<StatusCode, AppError> {
     let result = sqlx::query!(
         "DELETE FROM recipe WHERE recipe_id = $1",
         remove_recipe_request.recipe_id
     )
-    .execute(&app_state.pool)
+    .execute(&state.pool)
     .await?;
     if result.rows_affected() == 0 {
         return Err(AppError::NotFound);
@@ -59,42 +60,59 @@ pub async fn remove_recipe_handler(
     Ok(StatusCode::NO_CONTENT)
 }
 
+#[instrument(ret, err, skip(state))]
 pub async fn update_recipe_handler(
-    State(app_state): State<AppState>,
+    State(state): State<AppState>,
     Path(recipe_id): Path<i32>,
     Json(recipe): Json<Recipe<CompactRecipeIngredient, NotBacked>>,
 ) -> Result<StatusCode, AppError> {
+    info!("Converting recipe to backed.");
     let recipe: Recipe<CompactRecipeIngredient, Backed> =
-        recipe.to_backed(&app_state.unit_ids, &app_state.ingredient_ids)?;
-    let mut transaction = app_state.pool.begin().await?;
-    update_recipe(recipe_id, recipe.name(), recipe.description(), &mut *transaction).await?;
-    delete_recipe_ingredients(recipe_id, &app_state).await?;
-    delete_recipe_steps(recipe_id, &app_state).await?;
+        recipe.to_backed(&state.unit_ids, &state.ingredient_ids)?;
+    info!("Beginning transaction.");
+    let mut transaction = state.pool.begin().await?;
+    info!("Updating 'recipe' table.");
+    update_recipe(
+        recipe_id,
+        recipe.name(),
+        recipe.description(),
+        &mut *transaction,
+    )
+    .await?;
+    info!("Deleting original recipe_ingredients.");
+    delete_recipe_ingredients(recipe_id, &state).await?;
+    info!("Deleting original steps.");
+    delete_recipe_steps(recipe_id, &state).await?;
+    info!("Inserting new recipe_ingredients.");
     bulk_insert_recipe_ingredients(recipe.ingredients(), recipe_id, &mut *transaction).await?;
+    info!("Inserting new steps.");
     bulk_insert_steps(recipe.steps(), recipe_id, &mut *transaction).await?;
+    info!("Committing transaction.");
     transaction.commit().await?;
     Ok(StatusCode::NO_CONTENT)
 }
 
+#[instrument(ret, err, skip(state))]
 pub async fn get_recipe_handler(
-    State(app_state): State<AppState>,
+    State(state): State<AppState>,
     Path(recipe_id): Path<i32>,
 ) -> Result<Json<Recipe<DetailedRecipeIngredient, Backed>>, AppError> {
-    let recipe = fetch_recipe_detailed(&app_state.pool, recipe_id).await?;
+    let recipe = fetch_recipe_detailed(&state.pool, recipe_id).await?;
     Ok(Json(recipe))
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct GetRecipesResponse {
     pub recipes: Vec<Recipe<DetailedRecipeIngredient, Backed>>,
     pub next_start_from: Option<i32>,
 }
-
+#[instrument(ret, err, skip(state))]
 pub async fn get_recipe_by_query_handler(
     State(state): State<AppState>,
     query: Query<PaginationQuery>,
 ) -> Result<Json<GetRecipesResponse>, AppError> {
     if query.limit > 15 || query.limit < 1 {
+        error!(limit = ?query.limit, "The request limit was not between 1 and 15", );
         return Err(AppError::BadRequest);
     }
     let recipe_ids = sqlx::query!(

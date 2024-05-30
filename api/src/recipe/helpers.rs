@@ -169,6 +169,7 @@ pub async fn bulk_insert_steps(
 /// This function returns an `AppError` if:
 /// - The query to update the recipe in the database fails.
 /// - The recipe with the specified ID is not found.
+#[instrument(ret, err, skip(executor))]
 pub async fn update_recipe(
     recipe_id: i32,
     name: &str,
