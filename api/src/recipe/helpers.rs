@@ -1,5 +1,4 @@
 use sqlx::{postgres::PgQueryResult, Executor, Postgres};
-use tower::util::error;
 use tracing::{info, instrument};
 
 use crate::application::{
@@ -8,7 +7,7 @@ use crate::application::{
 };
 
 use super::{
-    recipe::Recipe,
+    recipe::{NotBacked, Recipe},
     recipe_ingredient::{CompactRecipeIngredient, RecipeIngredient},
     recipe_step::RecipeStep,
 };
@@ -29,7 +28,8 @@ type SqlxError = sqlx::Error;
 /// # Errors
 /// This function returns an `AppError` if:
 /// - The query to insert the recipe into the database fails.
-pub async fn insert_recipe<I: RecipeIngredient, NotBacked>(
+#[instrument(ret, err, skip(executor))]
+pub async fn insert_recipe<I: RecipeIngredient + std::fmt::Debug>(
     recipe: &Recipe<I, NotBacked>,
     executor: impl Executor<'_, Database = Postgres>,
 ) -> Result<i32, AppError> {
@@ -42,6 +42,7 @@ pub async fn insert_recipe<I: RecipeIngredient, NotBacked>(
     )
     .fetch_one(executor)
     .await?;
+    info!("Recipe successfully inserted into DB.");
     Ok(recipe_query_result.recipe_id)
 }
 
@@ -64,7 +65,7 @@ pub async fn insert_recipe<I: RecipeIngredient, NotBacked>(
 /// - The query to insert the ingredients into the database fails.
 /// - There is a foreign key violation (invalid ingredient ID).
 /// - There is a unique constraint violation (duplicate ingredient ID).
-#[instrument]
+#[instrument(ret, err, skip(executor))]
 pub async fn bulk_insert_recipe_ingredients(
     ingredients: &[CompactRecipeIngredient],
     recipe_id: i32,
@@ -98,7 +99,6 @@ pub async fn bulk_insert_recipe_ingredients(
     {
         Ok(_) => Ok(()),
         Err(SqlxError::Database(db_err)) if db_err.is_foreign_key_violation() => {
-            info!("Something unexpected has happened!");
             Err(AppError::RecipeParsingError(RecipeParsingError::InvalidIngredientId))
         }
         Err(SqlxError::Database(db_err)) if db_err.is_unique_violation() => {
@@ -125,6 +125,7 @@ pub async fn bulk_insert_recipe_ingredients(
 /// # Errors
 /// This function returns a `sqlx::Error` if:
 /// - The query to insert the steps into the database fails.
+#[instrument(ret, err, skip(executor))]
 pub async fn bulk_insert_steps(
     steps: &[RecipeStep],
     recipe_id: i32,
@@ -133,7 +134,7 @@ pub async fn bulk_insert_steps(
     let step_numbers: Vec<i32> = steps.iter().map(|step| step.step_number).collect();
     let instructions: Vec<String> = steps.iter().map(|step| step.instruction.clone()).collect();
     let rec_ids: Vec<i32> = (0..step_numbers.len()).map(|_| recipe_id).collect();
-
+    info!("Inserting steps");
     let query_result = sqlx::query!(
         r#"
                 INSERT INTO step (recipe_id, step_number, instruction)
@@ -144,8 +145,9 @@ pub async fn bulk_insert_steps(
         &instructions
     )
     .execute(executor)
-    .await?;
-    Ok(query_result)
+    .await;
+    info!(?query_result, "Steps inserted.", );
+    Ok(query_result.unwrap())
 }
 
 /// Updates a recipe in the database.

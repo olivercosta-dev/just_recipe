@@ -18,21 +18,21 @@ use crate::{
     },
     utilities::{fetchers::fetch_recipe_detailed, queries::PaginationQuery},
 };
-#[instrument]
+#[instrument(ret, err, skip(app_state))]
 pub async fn add_recipe_handler(
     State(app_state): State<AppState>,
     Json(recipe): Json<Recipe<CompactRecipeIngredient, NotBacked>>,
 ) -> Result<StatusCode, AppError> {
     let recipe = recipe.validate()?;
-    info!("Beginning transaction");
+    info!("Beginning transaction.");
     let mut transaction = app_state.pool.begin().await?;
-    info!("Inserting recipe to db");
+    info!("Inserting recipe to db.");
     let recipe_id = insert_recipe(&recipe, &mut *transaction).await?;
-    info!("Inserting ingredients to db");
+    info!("Inserting ingredients to db.");
     bulk_insert_recipe_ingredients(recipe.ingredients(), recipe_id, &mut *transaction).await?;
-    info!("Inserting steps to db");
+    info!("Inserting steps to db.");
     bulk_insert_steps(recipe.steps(), recipe_id, &mut *transaction).await?;
-    info!("Committing transaction");
+    info!("Committing transaction.");
     transaction.commit().await?;
     Ok(StatusCode::NO_CONTENT)
 }

@@ -1,5 +1,4 @@
-use core::panic;
-use std::{marker::PhantomData, ops::Not};
+use std::{marker::PhantomData};
 
 use crate::{application::error::{AppError, RecipeParsingError}, utilities::{fetchers::fetch_ingredients_and_units, random_generation::{recipes::generate_random_recipe_ingredients, steps::generate_random_number_of_steps}}};
 use dashmap::DashSet;
@@ -27,6 +26,7 @@ pub struct Recipe<I: RecipeIngredient, BackedState = NotBacked> {
 }
 #[derive(Debug)]
 pub struct Backed;
+
 #[derive(Debug)]
 pub struct NotBacked;
 

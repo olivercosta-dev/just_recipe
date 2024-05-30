@@ -1,3 +1,6 @@
+use core::fmt;
+use std::fmt::write;
+
 use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
@@ -33,6 +36,7 @@ impl IntoResponse for AppError {
         .into_response()
     }
 }
+
 impl From<RecipeParsingError> for AppError {
     fn from(err: RecipeParsingError) -> Self {
         AppError::RecipeParsingError(err)
@@ -42,5 +46,29 @@ impl From<RecipeParsingError> for AppError {
 impl From<sqlx::Error> for AppError {
     fn from(_: sqlx::Error) -> Self {
         AppError::InternalServerError
+    }
+}
+
+impl fmt::Display for AppError{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            AppError::InternalServerError => write!(f, "Something unexpected happened. Internal server error."),
+            AppError::NotFound => write!(f, "Resource was not found."),
+            AppError::Conflict => write!(f, "Conflicting resources."),
+            AppError::BadRequest => write!(f, "The request was in incorrect format."),
+            AppError::RecipeParsingError(err) => write!(f, "There was an error parsing the recipe: {}", err),
+        }
+    }
+}
+
+impl fmt::Display for RecipeParsingError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            RecipeParsingError::StepNumbersOutOfOrder => write!(f, "Step numbers are out of order."),
+            RecipeParsingError::RecipeIdNotPositive => write!(f, "Recipe ID must be positive."),
+            RecipeParsingError::InvalidUnitId => write!(f, "Invalid unit ID."),
+            RecipeParsingError::InvalidIngredientId => write!(f, "Invalid ingredient ID."),
+            RecipeParsingError::DuplicateIngredientId => write!(f, "Duplicate ingredient ID."),
+        }
     }
 }
