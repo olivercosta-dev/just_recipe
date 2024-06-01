@@ -21,7 +21,6 @@ use just_recipe::{
 use serde_json::json;
 use sqlx::PgPool;
 use tower::ServiceExt;
-
 #[sqlx::test(fixtures(
     path = "../fixtures",
     scripts("units", "ingredients", "recipes", "recipe_ingredients", "steps")

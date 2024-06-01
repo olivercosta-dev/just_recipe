@@ -14,13 +14,13 @@ use tower_http::cors::{Any, CorsLayer};
 pub struct App {
     url: String,
     port: i32,
-    // This router is what owns the AppState
-    // It is purposefully not Router<AppState>
-    // As recommended by the axum documentation:
-    // "We can only call Router::into_make_service on Router<()>, not Router<AppState>"
-    // Router<S> means a router that is MISSING a state of type S to be able to handle requests.
-    // It does NOT mean a Router that HAS a state of type S.
-    // https://docs.rs/axum/latest/axum/routing/struct.Router.html#method.with_state
+    /// This router is what owns the AppState.
+    /// It is purposefully not Router<AppState>,
+    /// as recommended by the axum documentation: <br>
+    /// "We can only call Router::into_make_service on Router<()>, not Router<AppState>"
+    /// Router<S> means a router that is MISSING a state of type S to be able to handle requests.
+    /// It does NOT mean a Router that HAS a state of type S. <br>
+    /// For more info see https://docs.rs/axum/latest/axum/routing/struct.Router.html#method.with_state.
     pub router: Router,
 }
 
