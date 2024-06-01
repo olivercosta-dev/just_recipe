@@ -16,7 +16,7 @@ const Explore: Component = () => {
   const [startFrom, setStartFrom] = createSignal<number>(0);
   const fetchRecipes = async (): Promise<GetRecipesResponse> => {
     let query = '';
-    query += 'startFrom=' + startFrom().toString();
+    query += 'start_from=' + startFrom().toString();
     query += `&limit=${limit().toString()}`
     const response = await fetch(`${baseUrl}/recipes?${query}`);
     if (!response.ok) {
