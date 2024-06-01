@@ -2,20 +2,12 @@ import { createSignal, For, onMount, Component } from 'solid-js';
 import { useIngredients } from '../IngredientsProvier';
 import { Select, createOptions } from '@thisbeyond/solid-select';
 import { useUnits } from '../UnitsProvider';
-import { Ingredient, Unit } from '../interfaces';
+import { Ingredient, CompactRecipeIngredient, RecipeStep, Unit } from '../interfaces';
 import { createStore } from 'solid-js/store';
 import baseUrl from '../baseUrl';
 
-interface RecipeIngredient {
-  ingredient_id?: number;
-  unit_id?: number;
-  quantity: string;
-}
 
-interface RecipeStep {
-  step_number: number,
-  instruction: string
-}
+
 const NewRecipePage: Component = () => {
   const { ingredients: allIngredients, fetchIngredients } = useIngredients();
   const { units: allUnits, fetchUnits } = useUnits();
@@ -28,7 +20,7 @@ const NewRecipePage: Component = () => {
   const [name, setName] = createSignal('');
   const [description, setDescription] = createSignal("");
 
-  const [recipeIngredients, setRecipeIngredients] = createStore<RecipeIngredient[]>([
+  const [recipeIngredients, setRecipeIngredients] = createStore<CompactRecipeIngredient[]>([
     {
       ingredient_id: 0,
       unit_id: 0,

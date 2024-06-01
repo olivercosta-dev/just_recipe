@@ -1,13 +1,34 @@
-// Define the type for Unit
 export interface Unit {
   unit_id?: string;
   singular_name: string;
   plural_name: string;
 }
 
-// Define the type for Ingredient
 export interface Ingredient {
   ingredient_id?: string;
   singular_name: string;
   plural_name: string;
+}
+
+export interface CompactRecipeIngredient {
+  ingredient_id?: number;
+  unit_id?: number;
+  quantity: string;
+}
+
+export interface RecipeStep {
+  // step_id?: number;
+  step_number: number,
+  instruction: string
+}
+export interface Recipe {
+  recipe_id?: number;
+  name: string;
+  description: string;
+  // ingredients: RecipeIngredient[];
+  // steps: RecipeStep[];
+}
+export interface GetRecipesResponse {
+  recipes: Recipe[];
+  next_start_from?: number;
 }
