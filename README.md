@@ -1,4 +1,4 @@
 # Just Recipe!
-Just Recipe (will be) a website where you can take care of all of your recipe needs.
-Backend built in rust.
+Just Recipe is a website where you can take care of all of your recipe needs.
+Backend built in Rust.
 Front-end built using SolidJS.
