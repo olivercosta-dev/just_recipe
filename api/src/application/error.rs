@@ -1,5 +1,4 @@
 use core::fmt;
-use std::fmt::write;
 
 use axum::{
     http::StatusCode,

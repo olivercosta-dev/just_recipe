@@ -1,7 +1,5 @@
 use just_recipe::application::{app::App, state::AppState};
 use sqlx::PgPool;
-use tracing::{info, span, Level};
-use tracing_subscriber::fmt::init;
 
 #[tokio::main]
 async fn main() {

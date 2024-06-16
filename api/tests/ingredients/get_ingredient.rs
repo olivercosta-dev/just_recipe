@@ -2,7 +2,7 @@ use std::default;
 
 use axum::{
     body::to_bytes,
-    http::{response, StatusCode},
+    http::StatusCode,
 };
 use fake::{Fake, Faker};
 use just_recipe::{

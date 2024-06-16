@@ -103,9 +103,11 @@ pub async fn get_recipe_handler(
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct GetRecipesResponse {
+    pub previous_start_from: Option<i32>,
     pub recipes: Vec<Recipe<DetailedRecipeIngredient, Backed>>,
     pub next_start_from: Option<i32>,
 }
+
 #[instrument(ret, err, skip(state))]
 pub async fn get_recipe_by_query_handler(
     State(state): State<AppState>,
@@ -117,21 +119,25 @@ pub async fn get_recipe_by_query_handler(
     }
     let recipe_ids = sqlx::query!(
         r#"
-                SELECT recipe_id as id 
-                FROM recipe
-                WHERE recipe_id >= $1 
-                ORDER BY recipe_id
-                LIMIT $2;
-            "#,
+            SELECT recipe_id as id, row_n
+            FROM (
+                SELECT recipe_id,
+                    ROW_NUMBER() OVER(ORDER BY recipe_id) AS row_n
+                FROM recipe) AS id_with_row_number
+            WHERE recipe_id >= $1
+            ORDER BY recipe_id
+            LIMIT $2;
+        "#,
         query.start_from,
         query.limit + 1
     )
     .fetch_all(&state.pool)
     .await?;
+
     // OPTIMIZE (oliver): This could be faster if it used arrays, as the max capacity is known.
     let mut recipes: Vec<Recipe<DetailedRecipeIngredient, Backed>> = Vec::new();
 
-    for recipe_id_record in recipe_ids {
+    for recipe_id_record in &recipe_ids {
         let recipe = fetch_recipe_detailed(&state.pool, recipe_id_record.id).await?;
         recipes.push(recipe);
     }
@@ -149,7 +155,50 @@ pub async fn get_recipe_by_query_handler(
                 .and_then(|rec: Recipe<DetailedRecipeIngredient, Backed>| rec.recipe_id())
         }
     };
+    let previous_start_from: Option<i32> = {
+        if let Some(first_id) = recipe_ids.get(0) {
+            // This is to avoid infinite loops,
+            // else the return value might get stuck at 1 
+            if first_id.row_n.expect("row number should not have been null") == 1 { 
+                None
+            }
+            // When there are less rows left than the limit,
+            // that means we have arrived at the first row.
+            else if first_id
+                .row_n
+                .expect("row number should not have been null")
+                == query.limit
+            {
+               Some(1)
+            } else {
+                let query_res = sqlx::query!(
+                    r#"
+                        SELECT recipe_id 
+                        FROM  (
+                        SELECT recipe_id,
+                            ROW_NUMBER() OVER(ORDER BY recipe_id) AS row_n
+                        FROM recipe) AS id_with_row_number
+                        WHERE row_n = $1
+                    "#,
+                    (first_id
+                        .row_n
+                        .expect("row number should not have been NULL")
+                        - query.limit)
+                )
+                .fetch_optional(&state.pool)
+                .await?;
+                if let Some(recipe_id_record) = query_res {
+                    Some(recipe_id_record.recipe_id)
+                } else {
+                    None
+                }
+            }
+        } else {
+            None
+        }
+    };
     let response = GetRecipesResponse {
+        previous_start_from,
         recipes,
         next_start_from,
     };

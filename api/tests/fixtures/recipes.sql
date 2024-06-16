@@ -1,2 +1,31 @@
--- It's important recipe_ids are supposed to be positive
+-- Recipes
 INSERT INTO recipe (recipe_id, name, description) VALUES (1, 'Apple Pie', 'It is a very tasty Apple Pie!');
+INSERT INTO recipe (recipe_id, name, description) VALUES (2, 'Spaghetti Bolognese', 'A classic Italian pasta dish.');
+INSERT INTO recipe (recipe_id, name, description) VALUES (3, 'Chicken Curry', 'A spicy and flavorful curry.');
+INSERT INTO recipe (recipe_id, name, description) VALUES (4, 'Caesar Salad', 'A fresh and healthy salad.');
+INSERT INTO recipe (recipe_id, name, description) VALUES (5, 'Chocolate Cake', 'A rich and moist chocolate cake.');
+INSERT INTO recipe (recipe_id, name, description) VALUES (6, 'Beef Stew', 'A hearty and comforting beef stew.');
+INSERT INTO recipe (recipe_id, name, description) VALUES (7, 'Vegetable Stir Fry', 'A quick and easy vegetable stir fry.');
+INSERT INTO recipe (recipe_id, name, description) VALUES (8, 'Grilled Cheese Sandwich', 'A simple and delicious grilled cheese sandwich.');
+INSERT INTO recipe (recipe_id, name, description) VALUES (9, 'Margarita Pizza', 'A classic Italian pizza with fresh tomatoes, mozzarella, and basil.');
+INSERT INTO recipe (recipe_id, name, description) VALUES (10, 'French Onion Soup', 'A rich and savory onion soup topped with melted cheese.');
+INSERT INTO recipe (recipe_id, name, description) VALUES (11, 'Beef Tacos', 'Delicious tacos with seasoned beef, cheese, and salsa.');
+INSERT INTO recipe (recipe_id, name, description) VALUES (12, 'Eggplant Parmesan', 'A baked dish with breaded eggplant slices, marinara sauce, and cheese.');
+INSERT INTO recipe (recipe_id, name, description) VALUES (13, 'Lemon Meringue Pie', 'A tangy lemon filling topped with a fluffy meringue.');
+INSERT INTO recipe (recipe_id, name, description) VALUES (14, 'Chicken Alfredo', 'Creamy pasta with grilled chicken and Alfredo sauce.');
+INSERT INTO recipe (recipe_id, name, description) VALUES (15, 'Pancakes', 'Fluffy pancakes served with syrup and butter.');
+INSERT INTO recipe (recipe_id, name, description) VALUES (16, 'Shrimp Scampi', 'Shrimp cooked in garlic butter sauce served over pasta.');
+INSERT INTO recipe (recipe_id, name, description) VALUES (17, 'Vegetable Soup', 'A healthy and hearty vegetable soup.');
+INSERT INTO recipe (recipe_id, name, description) VALUES (18, 'Steak Frites', 'Grilled steak served with French fries.');
+INSERT INTO recipe (recipe_id, name, description) VALUES (19, 'Quiche Lorraine', 'A savory pie with eggs, cheese, and bacon.');
+INSERT INTO recipe (recipe_id, name, description) VALUES (20, 'Tomato Basil Soup', 'A creamy soup made with fresh tomatoes and basil.');
+INSERT INTO recipe (recipe_id, name, description) VALUES (21, 'Fish and Chips', 'Crispy fried fish served with French fries.');
+INSERT INTO recipe (recipe_id, name, description) VALUES (22, 'Chicken Noodle Soup', 'A comforting soup with chicken, noodles, and vegetables.');
+INSERT INTO recipe (recipe_id, name, description) VALUES (23, 'Mushroom Risotto', 'A creamy rice dish with mushrooms and Parmesan cheese.');
+INSERT INTO recipe (recipe_id, name, description) VALUES (24, 'Turkey Sandwich', 'A hearty sandwich with turkey, lettuce, and tomato.');
+INSERT INTO recipe (recipe_id, name, description) VALUES (25, 'Lasagna', 'Layers of pasta, meat sauce, and cheese baked to perfection.');
+INSERT INTO recipe (recipe_id, name, description) VALUES (26, 'BBQ Ribs', 'Tender ribs coated in a smoky barbecue sauce.');
+INSERT INTO recipe (recipe_id, name, description) VALUES (27, 'Greek Salad', 'A fresh salad with tomatoes, cucumbers, olives, and feta cheese.');
+INSERT INTO recipe (recipe_id, name, description) VALUES (28, 'Pad Thai', 'A Thai dish with stir-fried rice noodles, shrimp, and peanuts.');
+INSERT INTO recipe (recipe_id, name, description) VALUES (29, 'Cheeseburger', 'A juicy beef burger topped with cheese, lettuce, and tomato.');
+INSERT INTO recipe (recipe_id, name, description) VALUES (30, 'Tiramisu', 'An Italian dessert with layers of coffee-soaked ladyfingers and mascarpone cheese.');
