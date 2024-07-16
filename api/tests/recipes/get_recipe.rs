@@ -93,6 +93,7 @@ async fn getting_recipes_returns_recipes_200_ok(pool: PgPool) -> sqlx::Result<()
     let app_state = AppState::new(pool);
     let app = App::new(app_state.clone(), default::Default::default(), 0).await;
     // let limit: i64 = (1..=15).fake(); // max 15 recipes at a time, otherwise it would be an error
+    // We want to check that all the possibilites work. This could be reworked later.
     for number in 1..=15 {
         let limit = number;
         let last_response: GetRecipesResponse =
