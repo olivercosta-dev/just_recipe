@@ -19,7 +19,7 @@ use just_recipe::{
 use serde_json::json;
 use sqlx::PgPool;
 use tower::ServiceExt;
-
+// TODO (oliver): Return the new recipe and it's ID. Do this on all post requests.
 #[sqlx::test(fixtures(path = "../fixtures", scripts("units", "ingredients")))]
 async fn adding_new_recipe_persists_and_returns_204_no_content(pool: PgPool) -> sqlx::Result<()> {
     let app_state = AppState::new(pool);

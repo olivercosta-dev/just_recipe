@@ -21,6 +21,7 @@ use just_recipe::{
 use serde_json::json;
 use sqlx::PgPool;
 use tower::ServiceExt;
+// TODO (oliver): The path to ALL get requests should be /reource/resource_id
 #[sqlx::test(fixtures(
     path = "../fixtures",
     scripts("units", "ingredients", "recipes", "recipe_ingredients", "steps")
