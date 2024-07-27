@@ -1,7 +1,7 @@
 import { For, Component, Show, onMount, createSignal } from 'solid-js';
 import AddNewIngredient from '../components/AddNewIngredient';
 import IngredientItem from '../components/IngredientItem';
-import { useIngredients } from '../IngredientsProvier';
+import { useIngredients } from '../IngredientsProvider';
 import { Ingredient } from '../interfaces';
 
 const Ingredients: Component = () => {

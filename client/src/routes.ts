@@ -35,6 +35,10 @@ const routes: RouteDefinition[] = [
         component: lazy(() => import("./pages/Units")),
     },
     {
+        path: "/recipes/:id",
+        component: lazy(() => import("./pages/Recipe")),
+    },
+    {
         path: "*404",
         component: lazy(() => import("./pages/NotFound")),
     }

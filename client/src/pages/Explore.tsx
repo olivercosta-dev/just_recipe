@@ -49,21 +49,29 @@ const Explore: Component = () => {
                 image={carbonaraImage}
                 name={recipe.name}
                 description={recipe.description}
+                recipe_id={recipe.recipe_id}
               />
             )}
           </For>
         </div>
         <div class="flex justify-between items-center m-x-4 mt-3">
-          <div class="flex gap-1 items-center" >
+          <div class="flex gap-1 items-center hover:cursor-pointer" onClick={() => {
+            if (getRecipesResponse()?.previous_start_from !== null) {
+              setStartFrom(getRecipesResponse()!.previous_start_from!);
+              refetch();
+            }
+          }}
+          >
             <img src={arrow} alt="Previous" class='m-h-6 -scale-x-100' />
             <span>Prev</span>
           </div>
-          <div class="flex gap-1 items-center" onClick={() => {
-                if (getRecipesResponse()?.next_start_from !== undefined) {
-                  setStartFrom(getRecipesResponse()!.next_start_from!);
-                  refetch();
-                }
-            }}
+
+          <div class="flex gap-1 items-center hover:cursor-pointer" onClick={() => {
+            if (getRecipesResponse()?.next_start_from !== null) {
+              setStartFrom(getRecipesResponse()!.next_start_from!);
+              refetch();
+            }
+          }}
           >
             <span>Next</span>
             <img src={arrowNext} alt="Next" class='m-h-6' />

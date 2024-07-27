@@ -1,7 +1,7 @@
 import addNewIcon from '../assets/add-new-icon.svg';
 import { createSignal, Component } from 'solid-js';
 import baseUrl from '../baseUrl';
-import { useIngredients } from '../IngredientsProvier';
+import { useIngredients } from '../IngredientsProvider';
 
 const AddNewIngredient: Component = (props) => {
   let dialogRef: HTMLDialogElement | undefined;

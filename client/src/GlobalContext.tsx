@@ -1,5 +1,5 @@
 import { createContext, useContext, JSX } from 'solid-js';
-import { IngredientsProvider, useIngredients } from './IngredientsProvier';
+import { IngredientsProvider, useIngredients } from './IngredientsProvider';
 import { UnitsProvider, useUnits } from './UnitsProvider';
 
 interface GlobalContextType {

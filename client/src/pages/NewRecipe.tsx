@@ -1,5 +1,5 @@
 import { createSignal, For, onMount, Component } from 'solid-js';
-import { useIngredients } from '../IngredientsProvier';
+import { useIngredients } from '../IngredientsProvider';
 import { Select, createOptions } from '@thisbeyond/solid-select';
 import { useUnits } from '../UnitsProvider';
 import { Ingredient, CompactRecipeIngredient, RecipeStep, Unit } from '../interfaces';
