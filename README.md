@@ -1,8 +1,8 @@
 # Just Recipe!
 Just Recipe is a project that I built from the ground up.
 
-Backend built in Rust, with the help of Axum, in the form of a REST API.
-Front-end built using SolidJS.
+Backend built in Rust, with the help of Axum, in the form of a REST API. <br />
+Front-end built using SolidJS. <br/>
 DB: Postgres
 
 Features:
